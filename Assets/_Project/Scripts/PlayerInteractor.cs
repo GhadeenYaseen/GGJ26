@@ -1,4 +1,5 @@
 using UnityEngine;
+using TMPro;
 
 public class PlayerInteractor : MonoBehaviour
 {
@@ -8,9 +9,16 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField] private float interactMaxViewportDistance = 0.75f;
     [SerializeField] private float interactMaxAngle = 60f;
     [SerializeField] private LayerMask interactMask = ~0;
+    [SerializeField] private bool requireCenterLook = true;
+    [SerializeField] private TMP_Text promptText;
+    [SerializeField] private string defaultPromptMessage = "Press {key} to interact";
 
     private PlayerCharacterController player;
     private Camera viewCamera;
+    private IInteractable currentInteractable;
+    private OutlineHighlight currentHighlight;
+    private float temporaryPromptTimer;
+    private string temporaryPromptMessage;
 
     private void Awake()
     {
@@ -31,28 +39,105 @@ public class PlayerInteractor : MonoBehaviour
 
     private void Update()
     {
+        UpdateHighlight();
         if (Input.GetKeyDown(interactKey))
         {
             TryInteract();
+        }
+
+        if (temporaryPromptTimer > 0f)
+        {
+            temporaryPromptTimer -= Time.deltaTime;
+            if (temporaryPromptTimer <= 0f)
+            {
+                temporaryPromptMessage = null;
+                UpdatePrompt();
+            }
         }
     }
 
     private void TryInteract()
     {
-        if (cameraTransform == null || player == null)
+        if (player == null)
         {
             return;
         }
 
-        IInteractable bestInteractable = FindBestInteractable();
-        if (bestInteractable != null)
+        if (currentInteractable != null)
         {
-            bestInteractable.Interact(player);
+            currentInteractable.Interact(player);
         }
     }
 
-    private IInteractable FindBestInteractable()
+    private void UpdateHighlight()
     {
+        IInteractable interactable;
+        OutlineHighlight highlight;
+
+        if (requireCenterLook)
+        {
+            TryGetInteractableFromCenterRay(out interactable, out highlight);
+        }
+        else
+        {
+            FindBestInteractable(out interactable, out highlight);
+        }
+
+        if (currentHighlight != highlight)
+        {
+            if (currentHighlight != null)
+            {
+                currentHighlight.SetHighlighted(false);
+            }
+
+            if (highlight != null)
+            {
+                highlight.SetHighlighted(true);
+            }
+
+            currentHighlight = highlight;
+        }
+
+        currentInteractable = interactable;
+        UpdatePrompt();
+    }
+
+    private void TryGetInteractableFromCenterRay(out IInteractable interactable, out OutlineHighlight highlight)
+    {
+        interactable = null;
+        highlight = null;
+
+        if (cameraTransform == null)
+        {
+            return;
+        }
+
+        Ray ray = new Ray(cameraTransform.position, cameraTransform.forward);
+        if (Physics.Raycast(ray, out RaycastHit hit, interactDistance, interactMask, QueryTriggerInteraction.Collide))
+        {
+            interactable = hit.collider.GetComponentInParent<IInteractable>();
+            if (interactable == null)
+            {
+                return;
+            }
+
+            Component interactableComponent = interactable as Component;
+            highlight = interactableComponent != null
+                ? interactableComponent.GetComponentInParent<OutlineHighlight>()
+                : null;
+        }
+    }
+
+    private void FindBestInteractable(out IInteractable bestInteractable, out OutlineHighlight bestHighlight)
+    {
+        bestInteractable = null;
+        bestHighlight = null;
+
+        if (cameraTransform == null)
+        {
+            return;
+        }
+
         Vector3 camPos = cameraTransform.position;
         Vector3 camForward = cameraTransform.forward;
 
@@ -63,7 +148,6 @@ public class PlayerInteractor : MonoBehaviour
             QueryTriggerInteraction.Collide
         );
 
-        IInteractable best = null;
         float bestViewportDist = float.MaxValue;
         float bestWorldDist = float.MaxValue;
         float bestAngle = float.MaxValue;
@@ -117,13 +201,53 @@ public class PlayerInteractor : MonoBehaviour
 
             if (isBetter)
             {
-                best = interactable;
+                bestInteractable = interactable;
+                Component interactableComponent = interactable as Component;
+                bestHighlight = interactableComponent != null
+                    ? interactableComponent.GetComponentInParent<OutlineHighlight>()
+                    : null;
                 bestViewportDist = viewportDist;
                 bestWorldDist = worldDist;
                 bestAngle = angle;
             }
         }
+    }
 
-        return best;
+    private void UpdatePrompt()
+    {
+        if (promptText == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(temporaryPromptMessage) && temporaryPromptTimer > 0f)
+        {
+            promptText.text = temporaryPromptMessage;
+            promptText.enabled = true;
+            return;
+        }
+
+        bool shouldShow = currentInteractable != null;
+        string prompt = shouldShow ? currentInteractable.GetPrompt(player) : string.Empty;
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            prompt = defaultPromptMessage;
+        }
+
+        string keyLabel = interactKey.ToString();
+        promptText.text = shouldShow ? prompt.Replace("{key}", keyLabel) : string.Empty;
+        promptText.enabled = shouldShow;
+    }
+
+    public void ShowTemporaryPrompt(string message, float durationSeconds)
+    {
+        if (promptText == null || string.IsNullOrWhiteSpace(message))
+        {
+            return;
+        }
+
+        temporaryPromptMessage = message;
+        temporaryPromptTimer = Mathf.Max(0.01f, durationSeconds);
+        UpdatePrompt();
     }
 }

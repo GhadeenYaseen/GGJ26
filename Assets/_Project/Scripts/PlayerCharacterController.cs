@@ -31,9 +31,12 @@ public class PlayerCharacterController : MonoBehaviour
     [SerializeField] private float sitSnapSpeed = 10f;
     [SerializeField] private float sitRotateSpeed = 540f;
     [SerializeField] private Vector3 sitAlignOffset = new Vector3(-0.0700000003f, 0.0860000029f, 0.0170000009f);
+    [SerializeField] private Vector3 sitPreOffset = Vector3.zero;
     [SerializeField] private float sitYawOffset = 0f;
     [SerializeField] private bool snapToSeatOnSit = true;
     [SerializeField] private bool lockToSeatWhileSitting = true;
+    [SerializeField] private string standPromptMessage = "Press {key} to stand";
+    [SerializeField] private float standPromptDuration = 2f;
 
     [Header("Audio")]
     [SerializeField] private AudioSource movementSource;
@@ -63,10 +66,12 @@ public class PlayerCharacterController : MonoBehaviour
     private Vector3 sitLockedPosition;
     private Quaternion sitLockedRotation;
     private bool originalApplyRootMotion;
+    private PlayerInteractor interactor;
 
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
+        interactor = GetComponent<PlayerInteractor>();
         if (animator == null)
         {
             animator = GetComponentInChildren<Animator>();
@@ -282,6 +287,13 @@ public class PlayerCharacterController : MonoBehaviour
         velocity = Vector3.zero;
         GetSitTargetPose(out sitLockedPosition, out sitLockedRotation);
 
+        if (interactor != null && !string.IsNullOrWhiteSpace(standPromptMessage))
+        {
+            string keyLabel = sitToggleKey.ToString();
+            string message = standPromptMessage.Replace("{key}", keyLabel);
+            interactor.ShowTemporaryPrompt(message, standPromptDuration);
+        }
+
         if (animator != null)
         {
             originalApplyRootMotion = animator.applyRootMotion;
@@ -335,7 +347,8 @@ public class PlayerCharacterController : MonoBehaviour
 
     private void GetSitTargetPose(out Vector3 targetPos, out Quaternion targetRot)
     {
-        targetPos = sitTarget != null ? sitTarget.TransformPoint(sitAlignOffset) : transform.position;
+        Vector3 totalOffset = sitAlignOffset + sitPreOffset;
+        targetPos = sitTarget != null ? sitTarget.TransformPoint(totalOffset) : transform.position;
         float yaw = sitYawOffset;
         Quaternion yawOffset = Quaternion.Euler(0f, yaw, 0f);
         targetRot = sitTarget != null ? sitTarget.rotation * yawOffset : transform.rotation;
