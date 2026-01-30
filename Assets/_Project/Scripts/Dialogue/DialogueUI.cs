@@ -24,6 +24,19 @@ public class DialogueUI : MonoBehaviour
     [SerializeField] private Speaker defaultSpeaker = Speaker.NPC;
     [SerializeField] private string[] npcPrefixes = new string[] { "NPC" };
     [SerializeField] private string[] playerPrefixes = new string[] { "Player", "Detective", "Ditective" };
+    [Header("NPC Animation")]
+    [SerializeField] private bool triggerNpcAnimationOnNpcLines = true;
+    [SerializeField] private float npcAnimationMinInterval = 0.5f;
+    [SerializeField] private NPC_Animation_Controller npcAnimation;
+    [SerializeField] private bool requireNpcPrefixForAnimation = false;
+    [Header("Voice")]
+    [SerializeField] private AudioSource npcVoiceSource;
+    [SerializeField] private AudioClip[] npcVoiceClips;
+    [SerializeField] private float npcVoiceMinInterval = 0.2f;
+    [SerializeField] private AudioSource playerVoiceSource;
+    [SerializeField] private AudioClip[] playerVoiceClips;
+    [SerializeField] private float playerVoiceMinInterval = 0.2f;
+    [SerializeField] private bool requirePrefixForVoice = false;
 
     private readonly List<DialogueLine> sentences = new List<DialogueLine>();
     private int sentenceIndex;
@@ -31,6 +44,9 @@ public class DialogueUI : MonoBehaviour
     private bool isTyping;
     private TMP_Text activeText;
     private GameObject activePanel;
+    private float lastNpcAnimationTime = -999f;
+    private float lastNpcVoiceTime = -999f;
+    private float lastPlayerVoiceTime = -999f;
 
     private enum Speaker
     {
@@ -43,6 +59,7 @@ public class DialogueUI : MonoBehaviour
     {
         public Speaker Speaker;
         public string Text;
+        public bool IsExplicitSpeaker;
     }
 
     public bool IsOpen
@@ -95,11 +112,18 @@ public class DialogueUI : MonoBehaviour
 
     public void StartDialogue(string paragraph)
     {
+        StartDialogue(paragraph, npcAnimation);
+    }
+
+    public void StartDialogue(string paragraph, NPC_Animation_Controller animationController)
+    {
+        npcAnimation = animationController;
         sentences.Clear();
         Speaker lastSpeaker = defaultSpeaker;
         foreach (string sentence in SplitIntoSentences(paragraph))
         {
-            if (TryParseSpeaker(sentence, out Speaker speaker, out string cleaned))
+            bool isExplicitSpeaker = TryParseSpeaker(sentence, out Speaker speaker, out string cleaned);
+            if (isExplicitSpeaker)
             {
                 lastSpeaker = speaker;
             }
@@ -117,7 +141,8 @@ public class DialogueUI : MonoBehaviour
             sentences.Add(new DialogueLine
             {
                 Speaker = speaker,
-                Text = cleaned
+                Text = cleaned,
+                IsExplicitSpeaker = isExplicitSpeaker
             });
         }
 
@@ -128,6 +153,7 @@ public class DialogueUI : MonoBehaviour
         }
 
         sentenceIndex = 0;
+        lastNpcAnimationTime = -999f;
         UpdateNextInstruction();
         SetNextButtonActive(true);
         SetNextInstructionActive(true);
@@ -171,18 +197,21 @@ public class DialogueUI : MonoBehaviour
             return;
         }
 
-        typingRoutine = StartCoroutine(TypeSentence(line.Text));
+        TriggerVoiceIfNeeded(line.Speaker, line.IsExplicitSpeaker);
+        typingRoutine = StartCoroutine(TypeSentence(line));
     }
 
-    private IEnumerator TypeSentence(string sentence)
+    private IEnumerator TypeSentence(DialogueLine line)
     {
         isTyping = true;
-        activeText.text = sentence;
+        activeText.text = line.Text;
         activeText.maxVisibleCharacters = 0;
         activeText.ForceMeshUpdate();
 
         int totalChars = activeText.textInfo.characterCount;
         float delay = Mathf.Max(0f, characterDelay);
+
+        TriggerNpcAnimationIfNeeded(line.Speaker, line.IsExplicitSpeaker);
 
         for (int i = 0; i <= totalChars; i++)
         {
@@ -338,6 +367,76 @@ public class DialogueUI : MonoBehaviour
         {
             dialogueText.text = string.Empty;
         }
+    }
+
+    private void TriggerNpcAnimationIfNeeded(Speaker speaker, bool isExplicitSpeaker)
+    {
+        if (!triggerNpcAnimationOnNpcLines)
+        {
+            return;
+        }
+        if (npcAnimation == null)
+        {
+            return;
+        }
+        if (speaker != Speaker.NPC)
+        {
+            return;
+        }
+        if (requireNpcPrefixForAnimation && !isExplicitSpeaker)
+        {
+            return;
+        }
+
+        float minInterval = Mathf.Max(0f, npcAnimationMinInterval);
+        if (Time.time - lastNpcAnimationTime < minInterval)
+        {
+            return;
+        }
+
+        npcAnimation.TriggerRandomAnimation();
+        lastNpcAnimationTime = Time.time;
+    }
+
+    private void TriggerVoiceIfNeeded(Speaker speaker, bool isExplicitSpeaker)
+    {
+        if (requirePrefixForVoice && !isExplicitSpeaker)
+        {
+            return;
+        }
+
+        if (speaker == Speaker.NPC)
+        {
+            PlayVoice(npcVoiceSource, npcVoiceClips, npcVoiceMinInterval, ref lastNpcVoiceTime);
+        }
+        else if (speaker == Speaker.Player)
+        {
+            PlayVoice(playerVoiceSource, playerVoiceClips, playerVoiceMinInterval, ref lastPlayerVoiceTime);
+        }
+    }
+
+    private static void PlayVoice(AudioSource source, AudioClip[] clips, float minInterval, ref float lastTime)
+    {
+        if (source == null || clips == null || clips.Length == 0)
+        {
+            return;
+        }
+
+        float interval = Mathf.Max(0f, minInterval);
+        if (Time.time - lastTime < interval)
+        {
+            return;
+        }
+
+        int index = Random.Range(0, clips.Length);
+        AudioClip clip = clips[index];
+        if (clip == null)
+        {
+            return;
+        }
+
+        source.PlayOneShot(clip);
+        lastTime = Time.time;
     }
 
     private bool TrySelectSpeakerUI(Speaker speaker)
