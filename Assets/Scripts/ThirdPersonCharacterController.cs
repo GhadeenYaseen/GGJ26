@@ -1,10 +1,9 @@
 using UnityEngine;
 
 [RequireComponent(typeof(CharacterController))]
-public class PlayerCharacterController : MonoBehaviour
+public class ThirdPersonCharacterController : MonoBehaviour
 {
     [Header("Movement")]
-
     [SerializeField] private float moveSpeed = 4f;
     [SerializeField] private float gravity = -9.81f;
     [SerializeField] private Transform cameraTransform;
@@ -13,32 +12,17 @@ public class PlayerCharacterController : MonoBehaviour
     [SerializeField] private float mouseSensitivity = 2f;
     [SerializeField] private float pitchClamp = 80f;
     [SerializeField] private bool invertY = false;
-    [SerializeField] private float seatedYawClamp = 120f;
-
-    [Header("Camera Offset")]
-    [SerializeField] private Vector3 sittingCameraLocalOffset = new Vector3(-0.179000005f, 1.19000006f, 0.460999995f);
-    [SerializeField] private float cameraOffsetBlendSpeed = 6f;
 
     [Header("Animation")]
     [SerializeField] private Animator animator;
     [SerializeField] private string speedParam = "Speed";
     [SerializeField] private string isMovingParam = "IsMoving";
-    [SerializeField] private string isSittingParam = "IsSitting";
     [SerializeField] private float speedDampTime = 0.1f;
-
-    [Header("Sitting")]
-    [SerializeField] private KeyCode sitToggleKey = KeyCode.C;
-    [SerializeField] private float sitSnapSpeed = 10f;
-    [SerializeField] private float sitRotateSpeed = 540f;
-    [SerializeField] private Vector3 sitAlignOffset = new Vector3(-0.0700000003f, 0.0860000029f, 0.0170000009f);
-    [SerializeField] private float sitYawOffset = 0f;
-    [SerializeField] private bool snapToSeatOnSit = true;
-    [SerializeField] private bool lockToSeatWhileSitting = true;
 
     [Header("Audio")]
     [SerializeField] private AudioSource movementSource;
     [SerializeField] private AudioSource breathingSource;
-    [SerializeField] private AudioClip[] footstepClips;
+    [SerializeField] private AudioClip footstepClip;
     [SerializeField] private float stepInterval = 0.5f;
     [SerializeField] private float stepSpeedThreshold = 0.1f;
     [SerializeField] private AudioClip breathingClip;
@@ -50,19 +34,10 @@ public class PlayerCharacterController : MonoBehaviour
     private Vector3 velocity;
     private int speedHash;
     private int isMovingHash;
-    private int isSittingHash;
     private bool hasSpeedParam;
     private bool hasIsMovingParam;
-    private bool hasIsSittingParam;
     private float stepTimer;
     private float pitch;
-    private float seatedYaw;
-    private bool isSitting;
-    private Transform sitTarget;
-    private Vector3 standingCameraLocalPos;
-    private Vector3 sitLockedPosition;
-    private Quaternion sitLockedRotation;
-    private bool originalApplyRootMotion;
 
     private void Awake()
     {
@@ -74,7 +49,6 @@ public class PlayerCharacterController : MonoBehaviour
 
         if (animator != null)
         {
-            originalApplyRootMotion = animator.applyRootMotion;
             if (!string.IsNullOrWhiteSpace(speedParam))
             {
                 speedHash = Animator.StringToHash(speedParam);
@@ -86,21 +60,11 @@ public class PlayerCharacterController : MonoBehaviour
                 isMovingHash = Animator.StringToHash(isMovingParam);
                 hasIsMovingParam = HasAnimatorParameter(animator, isMovingHash);
             }
-
-            if (!string.IsNullOrWhiteSpace(isSittingParam))
-            {
-                isSittingHash = Animator.StringToHash(isSittingParam);
-                hasIsSittingParam = HasAnimatorParameter(animator, isSittingHash);
-            }
         }
 
         if (cameraTransform == null && Camera.main != null)
         {
             cameraTransform = Camera.main.transform;
-        }
-        if (cameraTransform != null)
-        {
-            standingCameraLocalPos = cameraTransform.localPosition;
         }
 
         if (breathingSource != null && breathingClip != null)
@@ -114,27 +78,6 @@ public class PlayerCharacterController : MonoBehaviour
     private void Update()
     {
         HandleLook();
-        UpdateCameraOffset();
-
-        if (Input.GetKeyDown(sitToggleKey))
-        {
-            if (isSitting)
-            {
-                StandUp();
-            }
-            else
-            {
-                SitDown(transform);
-            }
-        }
-
-        if (isSitting)
-        {
-            UpdateSitPose();
-            UpdateAnimator(false, 0f);
-            UpdateAudio(false, Vector3.zero);
-            return;
-        }
 
         Vector2 input = new Vector2(Input.GetAxis("Horizontal"), Input.GetAxis("Vertical"));
         Vector3 inputDirection = new Vector3(input.x, 0f, input.y);
@@ -176,11 +119,6 @@ public class PlayerCharacterController : MonoBehaviour
         {
             animator.SetBool(isMovingHash, hasInput);
         }
-
-        if (hasIsSittingParam)
-        {
-            animator.SetBool(isSittingHash, isSitting);
-        }
     }
 
     private static bool HasAnimatorParameter(Animator targetAnimator, int nameHash)
@@ -201,7 +139,7 @@ public class PlayerCharacterController : MonoBehaviour
         float speed = planarMove.magnitude;
         bool isMoving = hasInput && speed > stepSpeedThreshold && controller.isGrounded;
 
-        if (movementSource != null && footstepClips != null && footstepClips.Length > 0)
+        if (movementSource != null && footstepClip != null)
         {
             if (isMoving)
             {
@@ -209,8 +147,7 @@ public class PlayerCharacterController : MonoBehaviour
                 if (stepTimer >= stepInterval)
                 {
                     stepTimer = 0f;
-                    int clipIndex = Random.Range(0, footstepClips.Length);
-                    movementSource.PlayOneShot(footstepClips[clipIndex]);
+                    movementSource.PlayOneShot(footstepClip);
                 }
             }
             else
@@ -240,15 +177,7 @@ public class PlayerCharacterController : MonoBehaviour
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * (invertY ? 1f : -1f);
 
-        if (!isSitting)
-        {
-            transform.Rotate(Vector3.up, mouseX, Space.World);
-            seatedYaw = 0f;
-        }
-        else
-        {
-            seatedYaw = Mathf.Clamp(seatedYaw + mouseX, -seatedYawClamp, seatedYawClamp);
-        }
+        transform.Rotate(Vector3.up, mouseX, Space.World);
 
         if (cameraTransform == null)
         {
@@ -256,88 +185,6 @@ public class PlayerCharacterController : MonoBehaviour
         }
 
         pitch = Mathf.Clamp(pitch + mouseY, -pitchClamp, pitchClamp);
-        float yaw = isSitting ? seatedYaw : 0f;
-        cameraTransform.localRotation = Quaternion.Euler(pitch, yaw, 0f);
-    }
-
-    private void UpdateCameraOffset()
-    {
-        if (cameraTransform == null)
-        {
-            return;
-        }
-
-        Vector3 targetPos = isSitting ? sittingCameraLocalOffset : standingCameraLocalPos;
-        cameraTransform.localPosition = Vector3.Lerp(
-            cameraTransform.localPosition,
-            targetPos,
-            cameraOffsetBlendSpeed * Time.deltaTime
-        );
-    }
-
-    public void SitDown(Transform target)
-    {
-        isSitting = true;
-        sitTarget = target;
-        velocity = Vector3.zero;
-        GetSitTargetPose(out sitLockedPosition, out sitLockedRotation);
-
-        if (animator != null)
-        {
-            originalApplyRootMotion = animator.applyRootMotion;
-            animator.applyRootMotion = false;
-        }
-
-        if (sitTarget != null && snapToSeatOnSit)
-        {
-            controller.enabled = false;
-            transform.SetPositionAndRotation(sitLockedPosition, sitLockedRotation);
-            controller.enabled = true;
-        }
-    }
-
-    public void StandUp()
-    {
-        isSitting = false;
-        sitTarget = null;
-
-        if (animator != null)
-        {
-            animator.applyRootMotion = originalApplyRootMotion;
-        }
-    }
-
-    private void UpdateSitPose()
-    {
-        if (sitTarget == null)
-        {
-            return;
-        }
-
-        if (lockToSeatWhileSitting)
-        {
-            transform.SetPositionAndRotation(sitLockedPosition, sitLockedRotation);
-            return;
-        }
-
-        GetSitTargetPose(out Vector3 targetPos, out Quaternion targetRot);
-        transform.position = Vector3.Lerp(transform.position, targetPos, sitSnapSpeed * Time.deltaTime);
-        transform.rotation = Quaternion.RotateTowards(transform.rotation, targetRot, sitRotateSpeed * Time.deltaTime);
-    }
-
-    private void LateUpdate()
-    {
-        if (isSitting && lockToSeatWhileSitting && sitTarget != null)
-        {
-            transform.SetPositionAndRotation(sitLockedPosition, sitLockedRotation);
-        }
-    }
-
-    private void GetSitTargetPose(out Vector3 targetPos, out Quaternion targetRot)
-    {
-        targetPos = sitTarget != null ? sitTarget.TransformPoint(sitAlignOffset) : transform.position;
-        float yaw = sitYawOffset;
-        Quaternion yawOffset = Quaternion.Euler(0f, yaw, 0f);
-        targetRot = sitTarget != null ? sitTarget.rotation * yawOffset : transform.rotation;
+        cameraTransform.localRotation = Quaternion.Euler(pitch, 0f, 0f);
     }
 }
