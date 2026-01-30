@@ -38,6 +38,9 @@ public class PlayerCharacterController : MonoBehaviour
     [SerializeField] private string standPromptMessage = "Press {key} to stand";
     [SerializeField] private float standPromptDuration = 2f;
 
+    [Header("Dialogue")]
+    [SerializeField] private DialogueUI dialogueUI;
+
     [Header("Audio")]
     [SerializeField] private AudioSource movementSource;
     [SerializeField] private AudioSource breathingSource;
@@ -282,6 +285,8 @@ public class PlayerCharacterController : MonoBehaviour
 
     public void SitDown(Transform target)
     {
+        CloseAllDialogue();
+
         isSitting = true;
         sitTarget = target;
         velocity = Vector3.zero;
@@ -316,6 +321,33 @@ public class PlayerCharacterController : MonoBehaviour
         if (animator != null)
         {
             animator.applyRootMotion = originalApplyRootMotion;
+        }
+
+        CloseAllDialogue();
+    }
+
+    private void CloseAllDialogue()
+    {
+        if (dialogueUI != null)
+        {
+            dialogueUI.CloseDialogue();
+            return;
+        }
+
+        DialogueUI[] allDialogue = Resources.FindObjectsOfTypeAll<DialogueUI>();
+        foreach (DialogueUI ui in allDialogue)
+        {
+            if (ui == null)
+            {
+                continue;
+            }
+
+            if (!ui.gameObject.scene.IsValid())
+            {
+                continue;
+            }
+
+            ui.CloseDialogue();
         }
     }
 
