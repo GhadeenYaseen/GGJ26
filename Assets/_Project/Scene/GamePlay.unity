@@ -1263,6 +1263,11 @@ PrefabInstance:
       propertyPath: sitAlignBlendOutDuration
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3885951461897942231, guid: 2fb3a65348bc9b04a9431aa8495070bd,
+        type: 3}
+      propertyPath: m_Radius
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6633428531743888865, guid: 2fb3a65348bc9b04a9431aa8495070bd,
         type: 3}
       propertyPath: m_Lens.NearClipPlane
