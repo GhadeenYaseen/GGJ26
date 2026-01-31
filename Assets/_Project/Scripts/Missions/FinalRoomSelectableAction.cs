@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using Cinemachine;
 using UnityEngine;
 
 public class FinalRoomSelectableAction : MonoBehaviour
@@ -8,39 +10,49 @@ public class FinalRoomSelectableAction : MonoBehaviour
 
     [Header("Duplicate Character")]
     [SerializeField] private GameObject sourceCharacter;
-    [SerializeField] private Transform duplicateSpawnPoint;
-    [SerializeField] private Vector3 duplicateWorldPosition;
+    [SerializeField] private Transform[] cloneSpawnPoints;
+    [SerializeField] private Vector3[] cloneWorldPositions;
     [SerializeField] private float duplicateYawDegrees = 180f;
-    [SerializeField] private bool useSpawnPoint = true;
+    [SerializeField] private bool useSpawnPoints = true;
+    [SerializeField] private int cloneCount = 2;
 
-    [Header("Mirror Move")]
-    [SerializeField] private Transform mirrorTransform;
-    [SerializeField] private float mirrorMoveDownDistance = 1f;
-    [SerializeField] private float mirrorMoveDuration = 1f;
-    [SerializeField] private bool mirrorUseLocalSpace = true;
+    [Header("Environment Lighting")]
+    [SerializeField] private bool disableAmbientLight = true;
+    [SerializeField] private Color ambientOffColor = Color.black;
+    [SerializeField] private float ambientOffIntensity = 0f;
+    [SerializeField] private Light[] environmentLightsToDisable;
 
-    [Header("Camera Rotate")]
-    [SerializeField] private Transform cameraTransform;
-    [SerializeField] private float cameraRotateDuration = 1.5f;
-    [SerializeField] private float cameraRotateZDegrees = 180f;
+    [Header("Virtual Camera")]
+    [SerializeField] private CinemachineVirtualCamera virtualCamera;
+    [SerializeField] private float cameraAttachDelay = 2f;
+    [SerializeField] private string headTag = "Head";
+    [SerializeField] private Vector3 cameraLocalPosition = Vector3.zero;
+    [SerializeField] private Vector3 cameraLocalEuler = Vector3.zero;
+    [SerializeField] private CinemachineVirtualCamera secondaryVirtualCamera;
+    [SerializeField] private float secondaryCameraDelay = 2f;
+    [SerializeField] private bool disablePrimaryWhenSecondaryActive = false;
+    [SerializeField] private GameObject[] objectsToActivateWithSecondaryCamera;
+    [SerializeField] private int primaryCameraPriority = 20;
+    [SerializeField] private int secondaryCameraPriority = 30;
+    [SerializeField] private int primaryCameraPriorityWhenSecondaryActive = 0;
 
-    [Header("Light")]
-    [SerializeField] private Light lightToEnable;
+    [Header("Animator Override")]
+    [SerializeField] private RuntimeAnimatorController animatorController;
+
+    [Header("Deactivate Objects")]
+    [SerializeField] private GameObject[] objectsToDeactivate;
+    [SerializeField] private GameObject[] selectableObjectsToDeactivate;
+    [SerializeField] private FinalRoomMissionTrigger missionTrigger;
 
     [Header("Behavior")]
     [SerializeField] private bool playOnce = true;
 
     private bool hasPlayed;
-    private Coroutine mirrorRoutine;
-    private Coroutine cameraRoutine;
+    private readonly List<GameObject> spawnedClones = new List<GameObject>();
+    private static CoroutineHost coroutineHost;
+    private float ambientBeforeTransition;
 
-    private void Awake()
-    {
-        if (cameraTransform == null && Camera.main != null)
-        {
-            cameraTransform = Camera.main.transform;
-        }
-    }
+    private sealed class CoroutineHost : MonoBehaviour { }
 
     private void Reset()
     {
@@ -59,137 +71,131 @@ public class FinalRoomSelectableAction : MonoBehaviour
 
         hasPlayed = true;
 
-        DuplicateCharacter();
+        DisableEnvironmentLighting();
+        spawnedClones.Clear();
+        List<GameObject> clones = DuplicateClones();
+        DeactivateObjects();
+        DisableSelectables();
 
-        if (mirrorRoutine != null)
+        if (clones.Count > 0)
         {
-            StopCoroutine(mirrorRoutine);
+            StartCameraAttach(clones[0]);
         }
-        if (cameraRoutine != null)
-        {
-            StopCoroutine(cameraRoutine);
-        }
-
-        mirrorRoutine = StartCoroutine(PlaySequence());
     }
 
-    private void DuplicateCharacter()
+    private List<GameObject> DuplicateClones()
     {
+        List<GameObject> clones = spawnedClones;
         if (sourceCharacter == null)
         {
             Debug.LogWarning($"{name}: Source character not assigned.");
+            return clones;
+        }
+
+        int count = GetCloneCount();
+        if (count <= 0)
+        {
+            return clones;
+        }
+
+        for (int i = 0; i < count; i++)
+        {
+            Vector3 spawnPos = GetClonePosition(i);
+            Quaternion baseRot = sourceCharacter.transform.rotation;
+            GameObject clone = Instantiate(sourceCharacter, spawnPos, baseRot);
+            if (clone != null)
+            {
+                if (i == 0)
+                {
+                    clone.transform.rotation = baseRot * Quaternion.Euler(0f, GetDuplicateYawDegrees(), 0f);
+                }
+                else
+                {
+                    clone.transform.rotation = baseRot;
+                    Vector3 scale = clone.transform.localScale;
+                    scale.x = -Mathf.Abs(scale.x);
+                    clone.transform.localScale = scale;
+                }
+                OutlineHighlight[] highlights = clone.GetComponentsInChildren<OutlineHighlight>(true);
+                for (int h = 0; h < highlights.Length; h++)
+                {
+                    if (highlights[h] != null)
+                    {
+                        highlights[h].SetHighlighted(false);
+                        highlights[h].enabled = false;
+                    }
+                }
+                StripOutlineMaterials(clone);
+                clones.Add(clone);
+            }
+        }
+
+        RestartCloneAnimations(clones);
+        return clones;
+    }
+
+    private void DisableEnvironmentLighting()
+    {
+        if (GetDisableAmbientLight())
+        {
+            RenderSettings.ambientLight = GetAmbientOffColor();
+            RenderSettings.ambientIntensity = GetAmbientOffIntensity();
+        }
+
+        Light[] lights = GetEnvironmentLightsToDisable();
+        if (lights == null)
+        {
             return;
         }
 
-        bool usePoint = GetUseSpawnPoint();
-        Transform spawnPoint = GetDuplicateSpawnPoint();
-        Vector3 spawnPos = usePoint && spawnPoint != null
-            ? spawnPoint.position
-            : GetDuplicateWorldPosition();
-        Quaternion baseRot = usePoint && spawnPoint != null
-            ? spawnPoint.rotation
-            : sourceCharacter.transform.rotation;
-
-        GameObject clone = Instantiate(sourceCharacter, spawnPos, baseRot);
-        if (clone != null)
+        for (int i = 0; i < lights.Length; i++)
         {
-            clone.transform.rotation = baseRot * Quaternion.Euler(0f, GetDuplicateYawDegrees(), 0f);
-            OutlineHighlight[] highlights = clone.GetComponentsInChildren<OutlineHighlight>(true);
-            for (int i = 0; i < highlights.Length; i++)
+            if (lights[i] != null)
             {
-                if (highlights[i] != null)
-                {
-                    highlights[i].SetHighlighted(false);
-                    highlights[i].enabled = false;
-                }
+                lights[i].enabled = false;
             }
-            StripOutlineMaterials(clone);
         }
     }
 
-    private IEnumerator PlaySequence()
+    private void DeactivateObjects()
     {
-        Transform mirror = GetMirrorTransform();
-        if (mirror != null)
+        GameObject[] objects = GetObjectsToDeactivate();
+        if (objects == null)
         {
-            yield return StartCoroutine(MoveMirrorDown());
+            return;
         }
 
-        Transform cam = GetCameraTransform();
-        if (cam != null)
+        for (int i = 0; i < objects.Length; i++)
         {
-            cameraRoutine = StartCoroutine(RotateCameraZ());
-            yield return cameraRoutine;
-        }
-
-        EnableLight();
-    }
-
-    private IEnumerator MoveMirrorDown()
-    {
-        Transform mirror = GetMirrorTransform();
-        bool useLocal = GetMirrorUseLocalSpace();
-        Vector3 start = useLocal ? mirror.localPosition : mirror.position;
-        Vector3 end = start + Vector3.down * GetMirrorMoveDownDistance();
-        float duration = Mathf.Max(0.01f, GetMirrorMoveDuration());
-        float time = 0f;
-
-        while (time < duration)
-        {
-            float t = time / duration;
-            Vector3 pos = Vector3.Lerp(start, end, t);
-            if (useLocal)
+            if (objects[i] != null)
             {
-                mirror.localPosition = pos;
+                objects[i].SetActive(false);
             }
-            else
+        }
+    }
+
+    private void DisableSelectables()
+    {
+        FinalRoomMissionTrigger trigger = GetMissionTrigger();
+        if (trigger != null)
+        {
+            trigger.DisableSelectableTargets();
+            return;
+        }
+
+        GameObject[] objects = GetSelectableObjectsToDeactivate();
+        if (objects == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < objects.Length; i++)
+        {
+            if (objects[i] != null)
             {
-                mirror.position = pos;
+                objects[i].SetActive(false);
             }
-
-            time += Time.deltaTime;
-            yield return null;
         }
-
-        if (useLocal)
-        {
-            mirror.localPosition = end;
-        }
-        else
-        {
-            mirror.position = end;
-        }
-    }
-
-    private IEnumerator RotateCameraZ()
-    {
-        Transform cam = GetCameraTransform();
-        Quaternion start = cam.rotation;
-        Quaternion end = start * Quaternion.Euler(0f, 0f, GetCameraRotateZDegrees());
-        float duration = Mathf.Max(0.01f, GetCameraRotateDuration());
-        float time = 0f;
-
-        while (time < duration)
-        {
-            float t = time / duration;
-            cam.rotation = Quaternion.Slerp(start, end, t);
-            time += Time.deltaTime;
-            yield return null;
-        }
-
-        cam.rotation = end;
-    }
-
-    private Transform GetDuplicateSpawnPoint()
-    {
-        return sharedSettings != null && sharedSettings.DuplicateSpawnPoint != null
-            ? sharedSettings.DuplicateSpawnPoint
-            : duplicateSpawnPoint;
-    }
-
-    private Vector3 GetDuplicateWorldPosition()
-    {
-        return sharedSettings != null ? sharedSettings.DuplicateWorldPosition : duplicateWorldPosition;
     }
 
     private float GetDuplicateYawDegrees()
@@ -197,55 +203,315 @@ public class FinalRoomSelectableAction : MonoBehaviour
         return sharedSettings != null ? sharedSettings.DuplicateYawDegrees : duplicateYawDegrees;
     }
 
-    private bool GetUseSpawnPoint()
+    private Transform[] GetCloneSpawnPoints()
     {
-        return sharedSettings != null ? sharedSettings.UseSpawnPoint : useSpawnPoint;
+        return sharedSettings != null && sharedSettings.CloneSpawnPoints != null && sharedSettings.CloneSpawnPoints.Length > 0
+            ? sharedSettings.CloneSpawnPoints
+            : cloneSpawnPoints;
     }
 
-    private Transform GetMirrorTransform()
+    private Vector3[] GetCloneWorldPositions()
     {
-        return sharedSettings != null && sharedSettings.MirrorTransform != null
-            ? sharedSettings.MirrorTransform
-            : mirrorTransform;
+        return sharedSettings != null && sharedSettings.CloneWorldPositions != null && sharedSettings.CloneWorldPositions.Length > 0
+            ? sharedSettings.CloneWorldPositions
+            : cloneWorldPositions;
     }
 
-    private float GetMirrorMoveDownDistance()
+    private bool GetUseSpawnPoints()
     {
-        return sharedSettings != null ? sharedSettings.MirrorMoveDownDistance : mirrorMoveDownDistance;
+        return sharedSettings != null ? sharedSettings.UseSpawnPoints : useSpawnPoints;
     }
 
-    private float GetMirrorMoveDuration()
+    private int GetCloneCount()
     {
-        return sharedSettings != null ? sharedSettings.MirrorMoveDuration : mirrorMoveDuration;
+        return sharedSettings != null ? sharedSettings.CloneCount : cloneCount;
     }
 
-    private bool GetMirrorUseLocalSpace()
+    private Vector3 GetClonePosition(int index)
     {
-        return sharedSettings != null ? sharedSettings.MirrorUseLocalSpace : mirrorUseLocalSpace;
-    }
-
-    private Transform GetCameraTransform()
-    {
-        return sharedSettings != null && sharedSettings.CameraTransform != null
-            ? sharedSettings.CameraTransform
-            : cameraTransform;
-    }
-
-    private float GetCameraRotateDuration()
-    {
-        return sharedSettings != null ? sharedSettings.CameraRotateDuration : cameraRotateDuration;
-    }
-
-    private float GetCameraRotateZDegrees()
-    {
-        return sharedSettings != null ? sharedSettings.CameraRotateZDegrees : cameraRotateZDegrees;
-    }
-
-    private void EnableLight()
-    {
-        if (lightToEnable != null)
+        if (GetUseSpawnPoints())
         {
-            lightToEnable.enabled = true;
+            Transform[] points = GetCloneSpawnPoints();
+            if (points != null && points.Length > 0)
+            {
+                int safeIndex = Mathf.Clamp(index, 0, points.Length - 1);
+                if (points[safeIndex] != null)
+                {
+                    return points[safeIndex].position;
+                }
+            }
+        }
+
+        Vector3[] positions = GetCloneWorldPositions();
+        if (positions != null && positions.Length > 0)
+        {
+            int safeIndex = Mathf.Clamp(index, 0, positions.Length - 1);
+            return positions[safeIndex];
+        }
+
+        return transform.position;
+    }
+
+    private bool GetDisableAmbientLight()
+    {
+        return sharedSettings != null ? sharedSettings.DisableAmbientLight : disableAmbientLight;
+    }
+
+    private Color GetAmbientOffColor()
+    {
+        return sharedSettings != null ? sharedSettings.AmbientOffColor : ambientOffColor;
+    }
+
+    private float GetAmbientOffIntensity()
+    {
+        return sharedSettings != null ? sharedSettings.AmbientOffIntensity : ambientOffIntensity;
+    }
+
+    private Light[] GetEnvironmentLightsToDisable()
+    {
+        return sharedSettings != null ? sharedSettings.EnvironmentLightsToDisable : environmentLightsToDisable;
+    }
+
+    private CinemachineVirtualCamera GetVirtualCamera()
+    {
+        return sharedSettings != null && sharedSettings.VirtualCamera != null
+            ? sharedSettings.VirtualCamera
+            : virtualCamera;
+    }
+
+    private float GetCameraAttachDelay()
+    {
+        return sharedSettings != null ? sharedSettings.CameraAttachDelay : cameraAttachDelay;
+    }
+
+    private string GetHeadTag()
+    {
+        return sharedSettings != null && !string.IsNullOrWhiteSpace(sharedSettings.HeadTag)
+            ? sharedSettings.HeadTag
+            : headTag;
+    }
+
+    private Vector3 GetCameraLocalPosition()
+    {
+        return sharedSettings != null ? sharedSettings.CameraLocalPosition : cameraLocalPosition;
+    }
+
+    private Vector3 GetCameraLocalEuler()
+    {
+        return sharedSettings != null ? sharedSettings.CameraLocalEuler : cameraLocalEuler;
+    }
+
+    private RuntimeAnimatorController GetAnimatorController()
+    {
+        return sharedSettings != null && sharedSettings.AnimatorController != null
+            ? sharedSettings.AnimatorController
+            : animatorController;
+    }
+
+    private CinemachineVirtualCamera GetSecondaryVirtualCamera()
+    {
+        return sharedSettings != null && sharedSettings.SecondaryVirtualCamera != null
+            ? sharedSettings.SecondaryVirtualCamera
+            : secondaryVirtualCamera;
+    }
+
+    private float GetSecondaryCameraDelay()
+    {
+        return sharedSettings != null ? sharedSettings.SecondaryCameraDelay : secondaryCameraDelay;
+    }
+
+    private bool GetDisablePrimaryWhenSecondaryActive()
+    {
+        return sharedSettings != null ? sharedSettings.DisablePrimaryWhenSecondaryActive : disablePrimaryWhenSecondaryActive;
+    }
+
+    private GameObject[] GetObjectsToActivateWithSecondaryCamera()
+    {
+        return sharedSettings != null ? sharedSettings.ObjectsToActivateWithSecondaryCamera : objectsToActivateWithSecondaryCamera;
+    }
+
+    private int GetPrimaryCameraPriority()
+    {
+        return sharedSettings != null ? sharedSettings.PrimaryCameraPriority : primaryCameraPriority;
+    }
+
+    private int GetSecondaryCameraPriority()
+    {
+        return sharedSettings != null ? sharedSettings.SecondaryCameraPriority : secondaryCameraPriority;
+    }
+
+    private int GetPrimaryCameraPriorityWhenSecondaryActive()
+    {
+        return sharedSettings != null ? sharedSettings.PrimaryCameraPriorityWhenSecondaryActive : primaryCameraPriorityWhenSecondaryActive;
+    }
+
+    private GameObject[] GetObjectsToDeactivate()
+    {
+        return sharedSettings != null ? sharedSettings.ObjectsToDeactivate : objectsToDeactivate;
+    }
+
+    private GameObject[] GetSelectableObjectsToDeactivate()
+    {
+        return sharedSettings != null ? sharedSettings.SelectableObjectsToDeactivate : selectableObjectsToDeactivate;
+    }
+
+    private FinalRoomMissionTrigger GetMissionTrigger()
+    {
+        return sharedSettings != null && sharedSettings.MissionTrigger != null
+            ? sharedSettings.MissionTrigger
+            : missionTrigger;
+    }
+
+    private void StartCameraAttach(GameObject clone)
+    {
+        if (clone == null)
+        {
+            return;
+        }
+
+        FinalRoomMissionTrigger trigger = GetMissionTrigger();
+        if (trigger != null)
+        {
+            trigger.StartCoroutine(AttachCameraAfterDelay(clone));
+            return;
+        }
+
+        EnsureCoroutineHost();
+        if (coroutineHost != null)
+        {
+            coroutineHost.StartCoroutine(AttachCameraAfterDelay(clone));
+        }
+    }
+
+    private IEnumerator AttachCameraAfterDelay(GameObject clone)
+    {
+        CinemachineVirtualCamera cam = GetVirtualCamera();
+        if (cam == null)
+        {
+            yield break;
+        }
+
+        float delay = Mathf.Max(0f, GetCameraAttachDelay());
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        if (clone == null)
+        {
+            yield break;
+        }
+
+        Transform head = FindTaggedChild(clone.transform, GetHeadTag());
+        if (head == null)
+        {
+            Debug.LogWarning($"{name}: Head tag not found on clone.");
+            yield break;
+        }
+
+        cam.transform.SetParent(head, false);
+        cam.transform.localPosition = GetCameraLocalPosition();
+        cam.transform.localRotation = Quaternion.Euler(GetCameraLocalEuler());
+        cam.gameObject.SetActive(true);
+        cam.Priority = GetPrimaryCameraPriority();
+
+        ApplyAnimatorToClones();
+
+        CinemachineVirtualCamera secondary = GetSecondaryVirtualCamera();
+        if (secondary != null)
+        {
+            float secondaryDelay = Mathf.Max(0f, GetSecondaryCameraDelay());
+            if (secondaryDelay > 0f)
+            {
+                yield return new WaitForSeconds(secondaryDelay);
+            }
+
+            ambientBeforeTransition = RenderSettings.ambientIntensity;
+            RenderSettings.ambientIntensity = 0f;
+
+            secondary.gameObject.SetActive(true);
+            secondary.Priority = GetSecondaryCameraPriority();
+            if (GetDisablePrimaryWhenSecondaryActive())
+            {
+                cam.Priority = GetPrimaryCameraPriorityWhenSecondaryActive();
+            }
+
+            if (spawnedClones.Count > 1 && spawnedClones[1] != null)
+            {
+                spawnedClones[1].SetActive(false);
+            }
+
+            GameObject[] toActivate = GetObjectsToActivateWithSecondaryCamera();
+            if (toActivate != null)
+            {
+                for (int i = 0; i < toActivate.Length; i++)
+                {
+                    if (toActivate[i] != null)
+                    {
+                        toActivate[i].SetActive(true);
+                    }
+                }
+            }
+
+            RenderSettings.ambientIntensity = ambientBeforeTransition;
+        }
+    }
+
+    private static void EnsureCoroutineHost()
+    {
+        if (coroutineHost != null)
+        {
+            return;
+        }
+
+        GameObject host = new GameObject("_FinalRoomCoroutineHost");
+        Object.DontDestroyOnLoad(host);
+        coroutineHost = host.AddComponent<CoroutineHost>();
+    }
+
+    private static Transform FindTaggedChild(Transform root, string tagToFind)
+    {
+        if (root == null || string.IsNullOrWhiteSpace(tagToFind))
+        {
+            return null;
+        }
+
+        Transform[] children = root.GetComponentsInChildren<Transform>(true);
+        for (int i = 0; i < children.Length; i++)
+        {
+            if (children[i] != null && children[i].CompareTag(tagToFind))
+            {
+                return children[i];
+            }
+        }
+
+        return null;
+    }
+
+    private void ApplyAnimatorToClones()
+    {
+        RuntimeAnimatorController controller = GetAnimatorController();
+        if (controller == null || spawnedClones.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < spawnedClones.Count; i++)
+        {
+            GameObject clone = spawnedClones[i];
+            if (clone == null)
+            {
+                continue;
+            }
+
+            Animator[] animators = clone.GetComponentsInChildren<Animator>(true);
+            for (int a = 0; a < animators.Length; a++)
+            {
+                if (animators[a] != null)
+                {
+                    animators[a].runtimeAnimatorController = controller;
+                }
+            }
         }
     }
 
@@ -293,6 +559,36 @@ public class FinalRoomSelectableAction : MonoBehaviour
             {
                 System.Array.Resize(ref materials, writeIndex);
                 renderer.sharedMaterials = materials;
+            }
+        }
+    }
+
+    private static void RestartCloneAnimations(List<GameObject> clones)
+    {
+        if (clones == null || clones.Count == 0)
+        {
+            return;
+        }
+
+        for (int i = 0; i < clones.Count; i++)
+        {
+            GameObject clone = clones[i];
+            if (clone == null)
+            {
+                continue;
+            }
+
+            Animator[] animators = clone.GetComponentsInChildren<Animator>(true);
+            for (int a = 0; a < animators.Length; a++)
+            {
+                Animator animator = animators[a];
+                if (animator == null)
+                {
+                    continue;
+                }
+
+                animator.Rebind();
+                animator.Update(0f);
             }
         }
     }

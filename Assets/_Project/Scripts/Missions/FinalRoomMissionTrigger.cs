@@ -22,6 +22,9 @@ public class FinalRoomMissionTrigger : MonoBehaviour
     [SerializeField] private TMP_Text instructionText;
     [SerializeField] private string instructionMessage = "Use Arrow Keys to choose, Enter to select";
     [SerializeField] private bool disableAfterSelection = true;
+    [SerializeField] private bool enableDevHotkey = true;
+    [SerializeField] private KeyCode devHotkey = KeyCode.P;
+    [SerializeField] private TMP_Text roomUnlockedText;
 
     [Header("Disable Player")]
     [SerializeField] private MonoBehaviour[] componentsToDisable;
@@ -64,6 +67,12 @@ public class FinalRoomMissionTrigger : MonoBehaviour
 
     private void Update()
     {
+        if (!missionActive && enableDevHotkey && Input.GetKeyDown(devHotkey))
+        {
+            Activate();
+            return;
+        }
+
         if (!missionActive)
         {
             return;
@@ -93,6 +102,12 @@ public class FinalRoomMissionTrigger : MonoBehaviour
 
         Debug.Log($"FinalRoomMissionTrigger: Activated by player.", this);
         missionActive = true;
+
+        if (roomUnlockedText != null)
+        {
+            roomUnlockedText.text = string.Empty;
+            roomUnlockedText.enabled = false;
+        }
 
         if (triggerCollider != null)
         {
@@ -291,5 +306,21 @@ public class FinalRoomMissionTrigger : MonoBehaviour
 
         instructionText.text = isVisible ? instructionMessage : string.Empty;
         instructionText.enabled = isVisible;
+    }
+
+    public void DisableSelectableTargets()
+    {
+        if (selectableTargets == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < selectableTargets.Length; i++)
+        {
+            if (selectableTargets[i] != null)
+            {
+                selectableTargets[i].gameObject.SetActive(false);
+            }
+        }
     }
 }

@@ -1,35 +1,70 @@
+using Cinemachine;
 using UnityEngine;
 
 public class FinalRoomActionSettings : MonoBehaviour
 {
     [Header("Duplicate Character")]
-    [SerializeField] private Transform duplicateSpawnPoint;
-    [SerializeField] private Vector3 duplicateWorldPosition;
+    [SerializeField] private Transform[] cloneSpawnPoints;
+    [SerializeField] private Vector3[] cloneWorldPositions;
     [SerializeField] private float duplicateYawDegrees = 180f;
-    [SerializeField] private bool useSpawnPoint = true;
+    [SerializeField] private bool useSpawnPoints = true;
+    [SerializeField] private int cloneCount = 2;
 
-    [Header("Mirror Move")]
-    [SerializeField] private Transform mirrorTransform;
-    [SerializeField] private float mirrorMoveDownDistance = 1f;
-    [SerializeField] private float mirrorMoveDuration = 1f;
-    [SerializeField] private bool mirrorUseLocalSpace = true;
+    [Header("Environment Lighting")]
+    [SerializeField] private bool disableAmbientLight = true;
+    [SerializeField] private Color ambientOffColor = Color.black;
+    [SerializeField] private float ambientOffIntensity = 0.5f;
+    [SerializeField] private Light[] environmentLightsToDisable;
 
-    [Header("Camera Rotate")]
-    [SerializeField] private Transform cameraTransform;
-    [SerializeField] private float cameraRotateDuration = 1.5f;
-    [SerializeField] private float cameraRotateZDegrees = 180f;
+    [Header("Virtual Camera")]
+    [SerializeField] private CinemachineVirtualCamera virtualCamera;
+    [SerializeField] private float cameraAttachDelay = 2f;
+    [SerializeField] private string headTag = "Head";
+    [SerializeField] private Vector3 cameraLocalPosition = Vector3.zero;
+    [SerializeField] private Vector3 cameraLocalEuler = Vector3.zero;
+    [SerializeField] private CinemachineVirtualCamera secondaryVirtualCamera;
+    [SerializeField] private float secondaryCameraDelay = 2f;
+    [SerializeField] private bool disablePrimaryWhenSecondaryActive = false;
+    [SerializeField] private GameObject[] objectsToActivateWithSecondaryCamera;
+    [SerializeField] private int primaryCameraPriority = 20;
+    [SerializeField] private int secondaryCameraPriority = 30;
+    [SerializeField] private int primaryCameraPriorityWhenSecondaryActive = 0;
 
-    public Transform DuplicateSpawnPoint => duplicateSpawnPoint;
-    public Vector3 DuplicateWorldPosition => duplicateWorldPosition;
+    [Header("Animator Override")]
+    [SerializeField] private RuntimeAnimatorController animatorController;
+
+    [Header("Deactivate Objects")]
+    [SerializeField] private GameObject[] objectsToDeactivate;
+    [SerializeField] private GameObject[] selectableObjectsToDeactivate;
+    [SerializeField] private FinalRoomMissionTrigger missionTrigger;
+
+    public Transform[] CloneSpawnPoints => cloneSpawnPoints;
+    public Vector3[] CloneWorldPositions => cloneWorldPositions;
     public float DuplicateYawDegrees => duplicateYawDegrees;
-    public bool UseSpawnPoint => useSpawnPoint;
+    public bool UseSpawnPoints => useSpawnPoints;
+    public int CloneCount => Mathf.Max(0, cloneCount);
 
-    public Transform MirrorTransform => mirrorTransform;
-    public float MirrorMoveDownDistance => mirrorMoveDownDistance;
-    public float MirrorMoveDuration => mirrorMoveDuration;
-    public bool MirrorUseLocalSpace => mirrorUseLocalSpace;
+    public bool DisableAmbientLight => disableAmbientLight;
+    public Color AmbientOffColor => ambientOffColor;
+    public float AmbientOffIntensity => ambientOffIntensity;
+    public Light[] EnvironmentLightsToDisable => environmentLightsToDisable;
 
-    public Transform CameraTransform => cameraTransform;
-    public float CameraRotateDuration => cameraRotateDuration;
-    public float CameraRotateZDegrees => cameraRotateZDegrees;
+    public CinemachineVirtualCamera VirtualCamera => virtualCamera;
+    public float CameraAttachDelay => cameraAttachDelay;
+    public string HeadTag => headTag;
+    public Vector3 CameraLocalPosition => cameraLocalPosition;
+    public Vector3 CameraLocalEuler => cameraLocalEuler;
+    public CinemachineVirtualCamera SecondaryVirtualCamera => secondaryVirtualCamera;
+    public float SecondaryCameraDelay => secondaryCameraDelay;
+    public bool DisablePrimaryWhenSecondaryActive => disablePrimaryWhenSecondaryActive;
+    public GameObject[] ObjectsToActivateWithSecondaryCamera => objectsToActivateWithSecondaryCamera;
+    public int PrimaryCameraPriority => primaryCameraPriority;
+    public int SecondaryCameraPriority => secondaryCameraPriority;
+    public int PrimaryCameraPriorityWhenSecondaryActive => primaryCameraPriorityWhenSecondaryActive;
+
+    public RuntimeAnimatorController AnimatorController => animatorController;
+
+    public GameObject[] ObjectsToDeactivate => objectsToDeactivate;
+    public GameObject[] SelectableObjectsToDeactivate => selectableObjectsToDeactivate;
+    public FinalRoomMissionTrigger MissionTrigger => missionTrigger;
 }
