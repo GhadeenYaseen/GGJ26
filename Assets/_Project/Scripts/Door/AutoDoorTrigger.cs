@@ -9,6 +9,9 @@ public class AutoDoorTrigger : MonoBehaviour
     [SerializeField] private float closeDelaySeconds = 3f;
     [SerializeField] private string playerTag = "Player";
     [SerializeField] private bool alternateOpenDirection = true;
+    [SerializeField] private AudioSource doorAudioSource;
+    [SerializeField] private AudioClip doorOpenClip;
+    [SerializeField] private float doorVolume = 1f;
 
     private Coroutine closeRoutine;
     private Quaternion closedRotation;
@@ -32,6 +35,18 @@ public class AutoDoorTrigger : MonoBehaviour
         }
 
         closedRotation = doorTransform.localRotation;
+
+        if (doorAudioSource == null)
+        {
+            doorAudioSource = GetComponent<AudioSource>();
+        }
+        if (doorAudioSource == null)
+        {
+            doorAudioSource = gameObject.AddComponent<AudioSource>();
+        }
+        doorAudioSource.playOnAwake = false;
+        doorAudioSource.loop = false;
+        doorAudioSource.volume = doorVolume;
     }
 
     private void OnTriggerEnter(Collider other)
@@ -50,6 +65,7 @@ public class AutoDoorTrigger : MonoBehaviour
         Quaternion targetOpen = GetAlternatingOpenRotation();
         StartRotate(targetOpen);
         isOpen = true;
+        PlayOpenSound();
 
         if (closeRoutine != null)
         {
@@ -111,5 +127,16 @@ public class AutoDoorTrigger : MonoBehaviour
         openPositive = !openPositive;
         float angle = openAngleY * direction;
         return closedRotation * Quaternion.Euler(0f, angle, 0f);
+    }
+
+    private void PlayOpenSound()
+    {
+        if (doorAudioSource == null || doorOpenClip == null)
+        {
+            return;
+        }
+
+        doorAudioSource.volume = doorVolume;
+        doorAudioSource.PlayOneShot(doorOpenClip);
     }
 }

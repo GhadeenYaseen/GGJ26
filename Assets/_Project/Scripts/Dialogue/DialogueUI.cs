@@ -121,6 +121,10 @@ public class DialogueUI : MonoBehaviour
     public void StartDialogue(string paragraph, NPC_Animation_Controller animationController)
     {
         npcAnimation = animationController;
+        if (MusicStateManager.Instance != null)
+        {
+            MusicStateManager.Instance.SetConversation(true);
+        }
         sentences.Clear();
         Speaker lastSpeaker = defaultSpeaker;
         foreach (string sentence in SplitIntoSentences(paragraph))
@@ -302,6 +306,10 @@ public class DialogueUI : MonoBehaviour
         SetNextButtonActive(false);
         UpdateNextInstruction(false);
         SetNextInstructionActive(false);
+        if (MusicStateManager.Instance != null)
+        {
+            MusicStateManager.Instance.SetConversation(false);
+        }
         StopAllVoice();
     }
 

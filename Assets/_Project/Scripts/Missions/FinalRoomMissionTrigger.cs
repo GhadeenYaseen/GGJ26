@@ -25,6 +25,8 @@ public class FinalRoomMissionTrigger : MonoBehaviour
     [SerializeField] private bool enableDevHotkey = true;
     [SerializeField] private KeyCode devHotkey = KeyCode.P;
     [SerializeField] private TMP_Text roomUnlockedText;
+    [SerializeField] private string chooseInnocentMessage = "Choose the innocent";
+    [SerializeField] private ConversationCounter conversationCounter;
 
     [Header("Disable Player")]
     [SerializeField] private MonoBehaviour[] componentsToDisable;
@@ -49,6 +51,10 @@ public class FinalRoomMissionTrigger : MonoBehaviour
         if (raycastCamera == null)
         {
             raycastCamera = Camera.main;
+        }
+        if (conversationCounter == null)
+        {
+            conversationCounter = FindObjectOfType<ConversationCounter>();
         }
 
         BuildSelectableCache();
@@ -102,11 +108,19 @@ public class FinalRoomMissionTrigger : MonoBehaviour
 
         Debug.Log($"FinalRoomMissionTrigger: Activated by player.", this);
         missionActive = true;
+        if (MusicStateManager.Instance != null)
+        {
+            MusicStateManager.Instance.SetFinalMission();
+        }
 
         if (roomUnlockedText != null)
         {
-            roomUnlockedText.text = string.Empty;
-            roomUnlockedText.enabled = false;
+            roomUnlockedText.text = chooseInnocentMessage;
+            roomUnlockedText.enabled = true;
+        }
+        if (conversationCounter != null)
+        {
+            conversationCounter.SetOverrideMessage(chooseInnocentMessage);
         }
 
         if (triggerCollider != null)
@@ -294,6 +308,15 @@ public class FinalRoomMissionTrigger : MonoBehaviour
             missionActive = false;
             SetHighlight(null);
             SetInstructionVisible(false);
+            if (roomUnlockedText != null)
+            {
+                roomUnlockedText.text = string.Empty;
+                roomUnlockedText.enabled = false;
+            }
+            if (conversationCounter != null)
+            {
+                conversationCounter.ClearOverrideMessage();
+            }
         }
     }
 

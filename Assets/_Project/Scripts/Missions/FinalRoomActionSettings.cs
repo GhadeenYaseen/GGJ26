@@ -22,6 +22,7 @@ public class FinalRoomActionSettings : MonoBehaviour
     [SerializeField] private string headTag = "Head";
     [SerializeField] private Vector3 cameraLocalPosition = Vector3.zero;
     [SerializeField] private Vector3 cameraLocalEuler = Vector3.zero;
+    [SerializeField] private GameObject[] objectsToActivateWithPrimaryCamera;
     [SerializeField] private CinemachineVirtualCamera secondaryVirtualCamera;
     [SerializeField] private float secondaryCameraDelay = 2f;
     [SerializeField] private bool disablePrimaryWhenSecondaryActive = false;
@@ -29,6 +30,10 @@ public class FinalRoomActionSettings : MonoBehaviour
     [SerializeField] private int primaryCameraPriority = 20;
     [SerializeField] private int secondaryCameraPriority = 30;
     [SerializeField] private int primaryCameraPriorityWhenSecondaryActive = 0;
+
+    [Header("Typing UI")]
+    [SerializeField] private TypewriterPanel typingPanel;
+    [SerializeField] private float typingPanelDelay = 0.5f;
 
     [Header("Animator Override")]
     [SerializeField] private RuntimeAnimatorController animatorController;
@@ -54,6 +59,7 @@ public class FinalRoomActionSettings : MonoBehaviour
     public string HeadTag => headTag;
     public Vector3 CameraLocalPosition => cameraLocalPosition;
     public Vector3 CameraLocalEuler => cameraLocalEuler;
+    public GameObject[] ObjectsToActivateWithPrimaryCamera => objectsToActivateWithPrimaryCamera;
     public CinemachineVirtualCamera SecondaryVirtualCamera => secondaryVirtualCamera;
     public float SecondaryCameraDelay => secondaryCameraDelay;
     public bool DisablePrimaryWhenSecondaryActive => disablePrimaryWhenSecondaryActive;
@@ -61,6 +67,8 @@ public class FinalRoomActionSettings : MonoBehaviour
     public int PrimaryCameraPriority => primaryCameraPriority;
     public int SecondaryCameraPriority => secondaryCameraPriority;
     public int PrimaryCameraPriorityWhenSecondaryActive => primaryCameraPriorityWhenSecondaryActive;
+    public TypewriterPanel TypingPanel => typingPanel;
+    public float TypingPanelDelay => typingPanelDelay;
 
     public RuntimeAnimatorController AnimatorController => animatorController;
 

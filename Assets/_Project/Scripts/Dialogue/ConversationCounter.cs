@@ -14,6 +14,8 @@ public class ConversationCounter : MonoBehaviour
     private readonly HashSet<string> completedIds = new HashSet<string>();
     private int totalCount;
     private bool isCompleted;
+    private bool hasOverrideMessage;
+    private string overrideMessage;
 
     public bool IsCompleted => isCompleted;
 
@@ -76,6 +78,13 @@ public class ConversationCounter : MonoBehaviour
             return;
         }
 
+        if (hasOverrideMessage)
+        {
+            statusLabel.text = overrideMessage ?? string.Empty;
+            statusLabel.enabled = !string.IsNullOrEmpty(statusLabel.text);
+            return;
+        }
+
         if (isCompleted)
         {
             statusLabel.text = completedMessage;
@@ -88,5 +97,23 @@ public class ConversationCounter : MonoBehaviour
         statusLabel.text = message
             .Replace("{current}", totalCount.ToString())
             .Replace("{total}", requiredConversations.ToString());
+    }
+
+    public void SetOverrideMessage(string message)
+    {
+        hasOverrideMessage = true;
+        overrideMessage = message;
+        UpdateLabel();
+    }
+
+    public void ClearOverrideMessage()
+    {
+        hasOverrideMessage = false;
+        overrideMessage = null;
+        if (statusLabel != null)
+        {
+            statusLabel.text = string.Empty;
+            statusLabel.enabled = false;
+        }
     }
 }

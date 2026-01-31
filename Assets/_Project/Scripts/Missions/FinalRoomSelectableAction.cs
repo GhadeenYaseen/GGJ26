@@ -28,6 +28,7 @@ public class FinalRoomSelectableAction : MonoBehaviour
     [SerializeField] private string headTag = "Head";
     [SerializeField] private Vector3 cameraLocalPosition = Vector3.zero;
     [SerializeField] private Vector3 cameraLocalEuler = Vector3.zero;
+    [SerializeField] private GameObject[] objectsToActivateWithPrimaryCamera;
     [SerializeField] private CinemachineVirtualCamera secondaryVirtualCamera;
     [SerializeField] private float secondaryCameraDelay = 2f;
     [SerializeField] private bool disablePrimaryWhenSecondaryActive = false;
@@ -35,6 +36,16 @@ public class FinalRoomSelectableAction : MonoBehaviour
     [SerializeField] private int primaryCameraPriority = 20;
     [SerializeField] private int secondaryCameraPriority = 30;
     [SerializeField] private int primaryCameraPriorityWhenSecondaryActive = 0;
+
+    [Header("Typing UI")]
+    [TextArea(2, 6)]
+    [SerializeField] private string selectionTextPrimary;
+    [TextArea(2, 6)]
+    [SerializeField] private string selectionTextSecondary;
+    [SerializeField] private string selectionTextSeparator = "\n\n";
+    [SerializeField] private Color primaryTextColor = new Color(1f, 0.6f, 0.6f, 1f);
+    [SerializeField] private Color secondaryTextColor = Color.white;
+    [SerializeField] private TypewriterPanel typingPanel;
 
     [Header("Animator Override")]
     [SerializeField] private RuntimeAnimatorController animatorController;
@@ -70,6 +81,10 @@ public class FinalRoomSelectableAction : MonoBehaviour
         }
 
         hasPlayed = true;
+        if (MusicStateManager.Instance != null)
+        {
+            MusicStateManager.Instance.SetAfterSelect();
+        }
 
         DisableEnvironmentLighting();
         spawnedClones.Clear();
@@ -77,7 +92,11 @@ public class FinalRoomSelectableAction : MonoBehaviour
         DeactivateObjects();
         DisableSelectables();
 
-        if (clones.Count > 0)
+        if (clones.Count > 1)
+        {
+            StartCameraAttach(clones[1]);
+        }
+        else if (clones.Count > 0)
         {
             StartCameraAttach(clones[0]);
         }
@@ -308,6 +327,11 @@ public class FinalRoomSelectableAction : MonoBehaviour
             : animatorController;
     }
 
+    private GameObject[] GetObjectsToActivateWithPrimaryCamera()
+    {
+        return sharedSettings != null ? sharedSettings.ObjectsToActivateWithPrimaryCamera : objectsToActivateWithPrimaryCamera;
+    }
+
     private CinemachineVirtualCamera GetSecondaryVirtualCamera()
     {
         return sharedSettings != null && sharedSettings.SecondaryVirtualCamera != null
@@ -328,6 +352,18 @@ public class FinalRoomSelectableAction : MonoBehaviour
     private GameObject[] GetObjectsToActivateWithSecondaryCamera()
     {
         return sharedSettings != null ? sharedSettings.ObjectsToActivateWithSecondaryCamera : objectsToActivateWithSecondaryCamera;
+    }
+
+    private TypewriterPanel GetTypingPanel()
+    {
+        return sharedSettings != null && sharedSettings.TypingPanel != null
+            ? sharedSettings.TypingPanel
+            : typingPanel;
+    }
+
+    private float GetTypingPanelDelay()
+    {
+        return sharedSettings != null ? sharedSettings.TypingPanelDelay : 0.5f;
     }
 
     private int GetPrimaryCameraPriority()
@@ -417,6 +453,18 @@ public class FinalRoomSelectableAction : MonoBehaviour
 
         ApplyAnimatorToClones();
 
+        GameObject[] toActivatePrimary = GetObjectsToActivateWithPrimaryCamera();
+        if (toActivatePrimary != null)
+        {
+            for (int i = 0; i < toActivatePrimary.Length; i++)
+            {
+                if (toActivatePrimary[i] != null)
+                {
+                    toActivatePrimary[i].SetActive(true);
+                }
+            }
+        }
+
         CinemachineVirtualCamera secondary = GetSecondaryVirtualCamera();
         if (secondary != null)
         {
@@ -436,11 +484,6 @@ public class FinalRoomSelectableAction : MonoBehaviour
                 cam.Priority = GetPrimaryCameraPriorityWhenSecondaryActive();
             }
 
-            if (spawnedClones.Count > 1 && spawnedClones[1] != null)
-            {
-                spawnedClones[1].SetActive(false);
-            }
-
             GameObject[] toActivate = GetObjectsToActivateWithSecondaryCamera();
             if (toActivate != null)
             {
@@ -454,6 +497,18 @@ public class FinalRoomSelectableAction : MonoBehaviour
             }
 
             RenderSettings.ambientIntensity = ambientBeforeTransition;
+
+            float typingDelay = Mathf.Max(0f, GetTypingPanelDelay());
+            if (typingDelay > 0f)
+            {
+                yield return new WaitForSeconds(typingDelay);
+            }
+
+            TypewriterPanel panel = GetTypingPanel();
+            if (panel != null)
+            {
+                panel.Show(BuildSelectionText());
+            }
         }
     }
 
@@ -486,6 +541,19 @@ public class FinalRoomSelectableAction : MonoBehaviour
         }
 
         return null;
+    }
+
+    private string BuildSelectionText()
+    {
+        if (string.IsNullOrWhiteSpace(selectionTextSecondary))
+        {
+            return selectionTextPrimary;
+        }
+
+        string colorA = ColorUtility.ToHtmlStringRGBA(primaryTextColor);
+        string colorB = ColorUtility.ToHtmlStringRGBA(secondaryTextColor);
+        string separator = selectionTextSeparator ?? string.Empty;
+        return $"<color=#{colorA}>{selectionTextPrimary}</color>{separator}<color=#{colorB}>{selectionTextSecondary}</color>";
     }
 
     private void ApplyAnimatorToClones()
