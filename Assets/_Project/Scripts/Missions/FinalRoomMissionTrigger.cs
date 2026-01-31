@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cinemachine;
+using TMPro;
 using UnityEngine;
 
 public class FinalRoomMissionTrigger : MonoBehaviour
@@ -18,6 +19,8 @@ public class FinalRoomMissionTrigger : MonoBehaviour
     [SerializeField] private LayerMask selectionMask = ~0;
     [SerializeField] private float selectionDistance = 6f;
     [SerializeField] private KeyCode selectKey = KeyCode.Return;
+    [SerializeField] private TMP_Text instructionText;
+    [SerializeField] private string instructionMessage = "Use Arrow Keys to choose, Enter to select";
 
     [Header("Disable Player")]
     [SerializeField] private MonoBehaviour[] componentsToDisable;
@@ -29,6 +32,8 @@ public class FinalRoomMissionTrigger : MonoBehaviour
     private bool missionActive;
     private int previousCameraPriority;
     private bool hasPreviousPriority;
+    private int currentIndex = -1;
+    private OutlineHighlight[] targetHighlights;
 
     private void Awake()
     {
@@ -43,6 +48,7 @@ public class FinalRoomMissionTrigger : MonoBehaviour
         }
 
         BuildSelectableCache();
+        SetInstructionVisible(false);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -62,29 +68,18 @@ public class FinalRoomMissionTrigger : MonoBehaviour
             return;
         }
 
-        if (raycastCamera == null)
+        if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.UpArrow))
         {
-            raycastCamera = Camera.main;
-            if (raycastCamera == null)
-            {
-                return;
-            }
+            MoveSelection(-1);
+        }
+        else if (Input.GetKeyDown(KeyCode.RightArrow) || Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            MoveSelection(1);
         }
 
-        Ray ray = raycastCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-        if (Physics.Raycast(ray, out RaycastHit hit, selectionDistance, selectionMask, QueryTriggerInteraction.Collide))
+        if (Input.GetKeyDown(selectKey))
         {
-            OutlineHighlight highlight = GetHighlightFromHit(hit.collider);
-            SetHighlight(highlight);
-
-            if (highlight != null && Input.GetKeyDown(selectKey))
-            {
-                Debug.Log($"Final mission selected: {highlight.name}");
-            }
-        }
-        else
-        {
-            SetHighlight(null);
+            SelectCurrent();
         }
     }
 
@@ -125,6 +120,10 @@ public class FinalRoomMissionTrigger : MonoBehaviour
                 }
             }
         }
+
+        currentIndex = GetFirstValidIndex();
+        SetHighlightByIndex(currentIndex);
+        SetInstructionVisible(true);
     }
 
     private void BuildSelectableCache()
@@ -137,8 +136,11 @@ public class FinalRoomMissionTrigger : MonoBehaviour
             return;
         }
 
-        foreach (Transform target in selectableTargets)
+        targetHighlights = new OutlineHighlight[selectableTargets.Length];
+
+        for (int i = 0; i < selectableTargets.Length; i++)
         {
+            Transform target = selectableTargets[i];
             if (target == null)
             {
                 continue;
@@ -154,6 +156,7 @@ public class FinalRoomMissionTrigger : MonoBehaviour
             }
 
             OutlineHighlight highlight = target.GetComponentInChildren<OutlineHighlight>(true);
+            targetHighlights[i] = highlight;
             if (highlight != null)
             {
                 selectableHighlights.Add(highlight);
@@ -195,5 +198,81 @@ public class FinalRoomMissionTrigger : MonoBehaviour
         {
             currentHighlight.SetHighlighted(true);
         }
+    }
+
+    private void MoveSelection(int direction)
+    {
+        if (selectableTargets == null || selectableTargets.Length == 0)
+        {
+            return;
+        }
+
+        int nextIndex = currentIndex;
+        for (int i = 0; i < selectableTargets.Length; i++)
+        {
+            nextIndex = (nextIndex + direction + selectableTargets.Length) % selectableTargets.Length;
+            if (selectableTargets[nextIndex] != null && targetHighlights[nextIndex] != null)
+            {
+                currentIndex = nextIndex;
+                SetHighlightByIndex(currentIndex);
+                return;
+            }
+        }
+    }
+
+    private void SetHighlightByIndex(int index)
+    {
+        if (index < 0 || selectableTargets == null || index >= selectableTargets.Length)
+        {
+            SetHighlight(null);
+            return;
+        }
+
+        SetHighlight(targetHighlights != null ? targetHighlights[index] : null);
+    }
+
+    private int GetFirstValidIndex()
+    {
+        if (selectableTargets == null)
+        {
+            return -1;
+        }
+
+        for (int i = 0; i < selectableTargets.Length; i++)
+        {
+            if (selectableTargets[i] != null && targetHighlights != null && targetHighlights[i] != null)
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private void SelectCurrent()
+    {
+        if (currentIndex < 0 || selectableTargets == null || currentIndex >= selectableTargets.Length)
+        {
+            return;
+        }
+
+        Transform target = selectableTargets[currentIndex];
+        if (target == null)
+        {
+            return;
+        }
+
+        Debug.Log($"Final mission selected: {target.name}");
+    }
+
+    private void SetInstructionVisible(bool isVisible)
+    {
+        if (instructionText == null)
+        {
+            return;
+        }
+
+        instructionText.text = isVisible ? instructionMessage : string.Empty;
+        instructionText.enabled = isVisible;
     }
 }
