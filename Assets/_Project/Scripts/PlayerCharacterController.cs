@@ -50,6 +50,7 @@ public class PlayerCharacterController : MonoBehaviour
     [SerializeField] private AudioClip breathingClip;
     [SerializeField] private bool breatheWhileMoving = false;
     [SerializeField] private bool breatheWhileIdle = true;
+    [SerializeField] private bool stopBreathingWhileSitting = true;
     [SerializeField] private float breathingVolume = 0.6f;
 
     private CharacterController controller;
@@ -206,6 +207,16 @@ public class PlayerCharacterController : MonoBehaviour
 
     private void UpdateAudio(bool hasInput, Vector3 planarMove)
     {
+        if (isSitting && stopBreathingWhileSitting)
+        {
+            if (breathingSource != null && breathingSource.isPlaying)
+            {
+                breathingSource.Stop();
+            }
+            stepTimer = 0f;
+            return;
+        }
+
         float speed = planarMove.magnitude;
         bool isMoving = hasInput && speed > stepSpeedThreshold && controller.isGrounded;
 
@@ -290,6 +301,11 @@ public class PlayerCharacterController : MonoBehaviour
         isSitting = true;
         sitTarget = target;
         velocity = Vector3.zero;
+
+        if (breathingSource != null && breathingSource.isPlaying)
+        {
+            breathingSource.Stop();
+        }
         GetSitTargetPose(out sitLockedPosition, out sitLockedRotation);
 
         if (interactor != null && !string.IsNullOrWhiteSpace(standPromptMessage))

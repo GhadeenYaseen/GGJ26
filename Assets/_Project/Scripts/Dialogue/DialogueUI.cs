@@ -37,6 +37,8 @@ public class DialogueUI : MonoBehaviour
     [SerializeField] private AudioClip[] playerVoiceClips;
     [SerializeField] private float playerVoiceMinInterval = 0.2f;
     [SerializeField] private bool requirePrefixForVoice = false;
+    [SerializeField] private bool loopVoiceWhileTyping = true;
+    [SerializeField] private bool keepVoiceWhenSameSpeaker = true;
 
     private readonly List<DialogueLine> sentences = new List<DialogueLine>();
     private int sentenceIndex;
@@ -47,6 +49,7 @@ public class DialogueUI : MonoBehaviour
     private float lastNpcAnimationTime = -999f;
     private float lastNpcVoiceTime = -999f;
     private float lastPlayerVoiceTime = -999f;
+    private Speaker currentVoiceSpeaker = Speaker.Unknown;
 
     private enum Speaker
     {
@@ -154,6 +157,9 @@ public class DialogueUI : MonoBehaviour
 
         sentenceIndex = 0;
         lastNpcAnimationTime = -999f;
+        lastNpcVoiceTime = -999f;
+        lastPlayerVoiceTime = -999f;
+        StopAllVoice();
         UpdateNextInstruction();
         SetNextButtonActive(true);
         SetNextInstructionActive(true);
@@ -296,6 +302,7 @@ public class DialogueUI : MonoBehaviour
         SetNextButtonActive(false);
         UpdateNextInstruction(false);
         SetNextInstructionActive(false);
+        StopAllVoice();
     }
 
     private void SetNextButtonActive(bool isActive)
@@ -367,6 +374,7 @@ public class DialogueUI : MonoBehaviour
         {
             dialogueText.text = string.Empty;
         }
+        StopAllVoice();
     }
 
     private void TriggerNpcAnimationIfNeeded(Speaker speaker, bool isExplicitSpeaker)
@@ -402,20 +410,55 @@ public class DialogueUI : MonoBehaviour
     {
         if (requirePrefixForVoice && !isExplicitSpeaker)
         {
+            StopAllVoice();
             return;
         }
 
         if (speaker == Speaker.NPC)
         {
-            PlayVoice(npcVoiceSource, npcVoiceClips, npcVoiceMinInterval, ref lastNpcVoiceTime);
+            bool sameSpeaker = currentVoiceSpeaker == Speaker.NPC;
+            if (keepVoiceWhenSameSpeaker && sameSpeaker && loopVoiceWhileTyping && IsVoicePlaying(npcVoiceSource))
+            {
+                return;
+            }
+
+            if (!sameSpeaker && playerVoiceSource != npcVoiceSource)
+            {
+                StopVoiceSource(playerVoiceSource);
+            }
+            bool forceStart = !sameSpeaker;
+            StartVoice(npcVoiceSource, npcVoiceClips, npcVoiceMinInterval, ref lastNpcVoiceTime, forceStart);
+            currentVoiceSpeaker = Speaker.NPC;
         }
         else if (speaker == Speaker.Player)
         {
-            PlayVoice(playerVoiceSource, playerVoiceClips, playerVoiceMinInterval, ref lastPlayerVoiceTime);
+            bool sameSpeaker = currentVoiceSpeaker == Speaker.Player;
+            if (keepVoiceWhenSameSpeaker && sameSpeaker && loopVoiceWhileTyping && IsVoicePlaying(playerVoiceSource))
+            {
+                return;
+            }
+
+            if (!sameSpeaker && npcVoiceSource != playerVoiceSource)
+            {
+                StopVoiceSource(npcVoiceSource);
+            }
+            bool forceStart = !sameSpeaker;
+            StartVoice(playerVoiceSource, playerVoiceClips, playerVoiceMinInterval, ref lastPlayerVoiceTime, forceStart);
+            currentVoiceSpeaker = Speaker.Player;
+        }
+        else
+        {
+            StopAllVoice();
         }
     }
 
-    private static void PlayVoice(AudioSource source, AudioClip[] clips, float minInterval, ref float lastTime)
+    private void StartVoice(
+        AudioSource source,
+        AudioClip[] clips,
+        float minInterval,
+        ref float lastTime,
+        bool forceStart
+    )
     {
         if (source == null || clips == null || clips.Length == 0)
         {
@@ -423,7 +466,7 @@ public class DialogueUI : MonoBehaviour
         }
 
         float interval = Mathf.Max(0f, minInterval);
-        if (Time.time - lastTime < interval)
+        if (!forceStart && Time.time - lastTime < interval)
         {
             return;
         }
@@ -435,8 +478,44 @@ public class DialogueUI : MonoBehaviour
             return;
         }
 
-        source.PlayOneShot(clip);
+        if (loopVoiceWhileTyping)
+        {
+            source.loop = true;
+            source.clip = clip;
+            source.Play();
+        }
+        else
+        {
+            source.loop = false;
+            source.PlayOneShot(clip);
+        }
         lastTime = Time.time;
+    }
+
+    private void StopAllVoice()
+    {
+        StopVoiceSource(npcVoiceSource);
+        StopVoiceSource(playerVoiceSource);
+        currentVoiceSpeaker = Speaker.Unknown;
+    }
+
+    private static void StopVoiceSource(AudioSource source)
+    {
+        if (source == null)
+        {
+            return;
+        }
+
+        source.loop = false;
+        if (source.isPlaying)
+        {
+            source.Stop();
+        }
+    }
+
+    private static bool IsVoicePlaying(AudioSource source)
+    {
+        return source != null && source.isPlaying;
     }
 
     private bool TrySelectSpeakerUI(Speaker speaker)
