@@ -1049,6 +1049,39 @@ MonoBehaviour:
   m_CameraActivatedEvent:
     m_PersistentCalls:
       m_Calls: []
+--- !u!1 &177150632 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1463127815815648, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+    type: 3}
+  m_PrefabInstance: {fileID: 286383926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!54 &177150637
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 177150632}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!4 &203158808 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7918674140732996395, guid: 2fb3a65348bc9b04a9431aa8495070bd,
@@ -1475,6 +1508,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6418528235873959270, guid: cd886b14e4e200546896243b522581d2,
+        type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0.84
+      objectReference: {fileID: 0}
+    - target: {fileID: 6418528235873959270, guid: cd886b14e4e200546896243b522581d2,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 13.42
+      objectReference: {fileID: 0}
     - target: {fileID: 6559432308382897622, guid: cd886b14e4e200546896243b522581d2,
         type: 3}
       propertyPath: m_IsActive
@@ -1775,6 +1818,123 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 672684659}
   m_SourcePrefab: {fileID: 100100000, guid: cd886b14e4e200546896243b522581d2, type: 3}
+--- !u!1001 &286383926
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 1544801320120194, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_Name
+      value: SM_Bld_Wall_Door_Double_Large_02
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalScale.x
+      value: 1.1848403
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 7.2753
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.02000022
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 3.77
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4619610932693292, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 65597277971091068, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Size.x
+      value: 0.6784366
+      objectReference: {fileID: 0}
+    - target: {fileID: 65597277971091068, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Size.z
+      value: 0.8312141
+      objectReference: {fileID: 0}
+    - target: {fileID: 65597277971091068, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Center.x
+      value: 0.3392183
+      objectReference: {fileID: 0}
+    - target: {fileID: 65597277971091068, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Center.z
+      value: 0.29277486
+      objectReference: {fileID: 0}
+    - target: {fileID: 65995356643220752, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Size.x
+      value: 0.6784366
+      objectReference: {fileID: 0}
+    - target: {fileID: 65995356643220752, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Size.z
+      value: 0.81799376
+      objectReference: {fileID: 0}
+    - target: {fileID: 65995356643220752, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Center.x
+      value: -0.3392183
+      objectReference: {fileID: 0}
+    - target: {fileID: 65995356643220752, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      propertyPath: m_Center.z
+      value: 0.2861647
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1067755432591082, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 747052059}
+    - targetCorrespondingSourceObject: {fileID: 1067755432591082, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 747052063}
+    - targetCorrespondingSourceObject: {fileID: 1463127815815648, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 177150637}
+    - targetCorrespondingSourceObject: {fileID: 1262060478001454, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1216172970}
+  m_SourcePrefab: {fileID: 100100000, guid: 26de68c87dd3d1f40a63c993f62fb4a4, type: 3}
 --- !u!1001 &315367092
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3639,6 +3799,66 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 281021458}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &747052057 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1067755432591082, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+    type: 3}
+  m_PrefabInstance: {fileID: 286383926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &747052058 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4686388560732648, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+    type: 3}
+  m_PrefabInstance: {fileID: 286383926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &747052059
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 747052057}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f11557b9cd2d6734e916cd8576dd9fda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  doorTransform: {fileID: 747052058}
+  slideDirection: {x: -1, y: 0, z: 0}
+  slideDistance: 2
+  slideSpeed: 2
+  closeOnExit: 1
+  playerTag: Player
+  conversationCounter: {fileID: 1821630303}
+  lockedMessageText: {fileID: 1376894168}
+  lockedMessage: Finish all conversations before entering.
+--- !u!54 &747052063
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 747052057}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 1
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
 --- !u!4 &770756150 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 4197656853579804, guid: fdb2cb2d45f7f8c40929de258b8857dd,
@@ -4589,6 +4809,39 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6bf7a55584b0c3b4db5ba2126803b1e6, type: 3}
+--- !u!1 &1216172968 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1262060478001454, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+    type: 3}
+  m_PrefabInstance: {fileID: 286383926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1216172969 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4221830531097990, guid: 26de68c87dd3d1f40a63c993f62fb4a4,
+    type: 3}
+  m_PrefabInstance: {fileID: 286383926}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1216172970
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1216172968}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f11557b9cd2d6734e916cd8576dd9fda, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  doorTransform: {fileID: 1216172969}
+  slideDirection: {x: 1, y: 0, z: 0}
+  slideDistance: 2
+  slideSpeed: 2
+  closeOnExit: 1
+  playerTag: Player
+  conversationCounter: {fileID: 1821630303}
+  lockedMessageText: {fileID: 1376894168}
+  lockedMessage: Finish all conversations before entering.
 --- !u!1001 &1226334897
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7447,3 +7700,4 @@ SceneRoots:
   - {fileID: 1501479204}
   - {fileID: 1451662548}
   - {fileID: 281021458}
+  - {fileID: 286383926}

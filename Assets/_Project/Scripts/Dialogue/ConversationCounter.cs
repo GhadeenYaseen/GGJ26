@@ -15,6 +15,8 @@ public class ConversationCounter : MonoBehaviour
     private int totalCount;
     private bool isCompleted;
 
+    public bool IsCompleted => isCompleted;
+
     private void Start()
     {
         UpdateLabel();
