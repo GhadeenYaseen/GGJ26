@@ -10,6 +10,9 @@ public class FinalRoomSlidingDoor : MonoBehaviour
     [SerializeField] private float slideSpeed = 2f;
     [SerializeField] private bool closeOnExit = true;
     [SerializeField] private string playerTag = "Player";
+    [SerializeField] private bool slideAwayFromPlayer = true;
+    [SerializeField] private AudioSource doorAudioSource;
+    [SerializeField] private AudioClip doorClip;
 
     [Header("Conversation Gate")]
     [SerializeField] private ConversationCounter conversationCounter;
@@ -17,7 +20,6 @@ public class FinalRoomSlidingDoor : MonoBehaviour
     [SerializeField] private string lockedMessage = "Finish all conversations before entering.";
 
     private Vector3 closedLocalPos;
-    private Vector3 openLocalPos;
     private Coroutine slideRoutine;
 
     private void Reset()
@@ -36,60 +38,39 @@ public class FinalRoomSlidingDoor : MonoBehaviour
         }
 
         closedLocalPos = doorTransform.localPosition;
-        Vector3 dir = slideDirection.sqrMagnitude > 0.0001f ? slideDirection.normalized : Vector3.right;
-        openLocalPos = closedLocalPos + dir * slideDistance;
+        if (doorAudioSource == null)
+        {
+            doorAudioSource = GetComponent<AudioSource>();
+        }
+        if (doorAudioSource == null)
+        {
+            doorAudioSource = gameObject.AddComponent<AudioSource>();
+        }
 
         HideLockedMessage();
     }
 
-    private void OnCollisionEnter(Collision collision)
+    public void NotifyPlayerEnter(Transform player)
     {
-        HandlePlayerEnter(collision.collider);
-    }
-
-    private void OnCollisionExit(Collision collision)
-    {
-        HandlePlayerExit(collision.collider);
-    }
-
-    private void OnTriggerEnter(Collider other)
-    {
-        HandlePlayerEnter(other);
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        HandlePlayerExit(other);
-    }
-
-    private void HandlePlayerEnter(Collider other)
-    {
-        if (other == null || !other.CompareTag(playerTag))
-        {
-            return;
-        }
-
         if (conversationCounter != null && !conversationCounter.IsCompleted)
         {
             ShowLockedMessage();
             return;
         }
 
+        Vector3 openLocalPos = GetOpenPositionForPlayer(player);
         StartSlide(openLocalPos);
         HideLockedMessage();
+        PlayDoorSound();
     }
 
-    private void HandlePlayerExit(Collider other)
+    public void NotifyPlayerExit()
     {
-        if (other == null || !other.CompareTag(playerTag))
-        {
-            return;
-        }
-
         HideLockedMessage();
         if (closeOnExit)
         {
             StartSlide(closedLocalPos);
+            PlayDoorSound();
         }
     }
 
@@ -142,5 +123,38 @@ public class FinalRoomSlidingDoor : MonoBehaviour
 
         lockedMessageText.text = string.Empty;
         lockedMessageText.enabled = false;
+    }
+
+    private void PlayDoorSound()
+    {
+        if (doorAudioSource == null || doorClip == null)
+        {
+            return;
+        }
+
+        doorAudioSource.PlayOneShot(doorClip);
+    }
+
+    private Vector3 GetOpenPositionForPlayer(Transform player)
+    {
+        Vector3 dir = slideDirection.sqrMagnitude > 0.0001f ? slideDirection.normalized : Vector3.right;
+        if (player == null || doorTransform == null)
+        {
+            return closedLocalPos + dir * slideDistance;
+        }
+
+        Vector3 localPlayer = doorTransform.InverseTransformPoint(player.position);
+        float side = Mathf.Sign(localPlayer.x);
+        if (Mathf.Approximately(side, 0f))
+        {
+            side = 1f;
+        }
+
+        if (slideAwayFromPlayer)
+        {
+            side = -side;
+        }
+
+        return closedLocalPos + dir * slideDistance * side;
     }
 }

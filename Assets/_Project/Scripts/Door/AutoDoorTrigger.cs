@@ -8,11 +8,13 @@ public class AutoDoorTrigger : MonoBehaviour
     [SerializeField] private float rotationSpeed = 180f;
     [SerializeField] private float closeDelaySeconds = 3f;
     [SerializeField] private string playerTag = "Player";
+    [SerializeField] private bool alternateOpenDirection = true;
 
     private Coroutine closeRoutine;
     private Quaternion closedRotation;
-    private Quaternion openRotation;
     private Coroutine rotateRoutine;
+    private bool openPositive = true;
+    private bool isOpen;
 
     private void Reset()
     {
@@ -30,7 +32,6 @@ public class AutoDoorTrigger : MonoBehaviour
         }
 
         closedRotation = doorTransform.localRotation;
-        openRotation = closedRotation * Quaternion.Euler(0f, openAngleY, 0f);
     }
 
     private void OnTriggerEnter(Collider other)
@@ -46,7 +47,9 @@ public class AutoDoorTrigger : MonoBehaviour
             return;
         }
 
-        StartRotate(openRotation);
+        Quaternion targetOpen = GetAlternatingOpenRotation();
+        StartRotate(targetOpen);
+        isOpen = true;
 
         if (closeRoutine != null)
         {
@@ -59,11 +62,17 @@ public class AutoDoorTrigger : MonoBehaviour
     {
         yield return new WaitForSeconds(Mathf.Max(0f, closeDelaySeconds));
         StartRotate(closedRotation);
+        isOpen = false;
         closeRoutine = null;
     }
 
     private void StartRotate(Quaternion targetRotation)
     {
+        if (isOpen && Quaternion.Angle(targetRotation, closedRotation) > 0.1f)
+        {
+            return;
+        }
+
         if (rotateRoutine != null)
         {
             StopCoroutine(rotateRoutine);
@@ -89,5 +98,18 @@ public class AutoDoorTrigger : MonoBehaviour
         }
 
         rotateRoutine = null;
+    }
+
+    private Quaternion GetAlternatingOpenRotation()
+    {
+        if (isOpen)
+        {
+            return closedRotation * Quaternion.Euler(0f, openAngleY, 0f);
+        }
+
+        float direction = (alternateOpenDirection && !openPositive) ? -1f : 1f;
+        openPositive = !openPositive;
+        float angle = openAngleY * direction;
+        return closedRotation * Quaternion.Euler(0f, angle, 0f);
     }
 }
