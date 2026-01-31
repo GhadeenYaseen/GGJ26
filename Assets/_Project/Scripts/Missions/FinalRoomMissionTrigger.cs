@@ -21,6 +21,7 @@ public class FinalRoomMissionTrigger : MonoBehaviour
     [SerializeField] private KeyCode selectKey = KeyCode.Return;
     [SerializeField] private TMP_Text instructionText;
     [SerializeField] private string instructionMessage = "Use Arrow Keys to choose, Enter to select";
+    [SerializeField] private bool disableAfterSelection = true;
 
     [Header("Disable Player")]
     [SerializeField] private MonoBehaviour[] componentsToDisable;
@@ -263,6 +264,22 @@ public class FinalRoomMissionTrigger : MonoBehaviour
         }
 
         Debug.Log($"Final mission selected: {target.name}");
+        FinalRoomSelectableAction action = target.GetComponentInParent<FinalRoomSelectableAction>();
+        if (action != null)
+        {
+            action.ActivateAction();
+        }
+        else
+        {
+            Debug.LogWarning($"FinalRoomMissionTrigger: No FinalRoomSelectableAction on {target.name} or its parents.");
+        }
+
+        if (disableAfterSelection)
+        {
+            missionActive = false;
+            SetHighlight(null);
+            SetInstructionVisible(false);
+        }
     }
 
     private void SetInstructionVisible(bool isVisible)
