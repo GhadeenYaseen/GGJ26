@@ -12,8 +12,13 @@ public class DialogueUI : MonoBehaviour
     [Header("Speaker Panels")]
     [SerializeField] private GameObject npcPanel;
     [SerializeField] private TMP_Text npcText;
+    [SerializeField] private Image npcIconImage;
     [SerializeField] private GameObject playerPanel;
     [SerializeField] private TMP_Text playerText;
+    [SerializeField] private Image playerIconImage;
+    [Header("Speaker Icons")]
+    [SerializeField] private Sprite npcIconSprite;
+    [SerializeField] private Sprite playerIconSprite;
     [SerializeField] private Button nextButton;
     [SerializeField] private KeyCode nextKey = KeyCode.Space;
     [SerializeField] private TMP_Text nextInstructionText;
@@ -50,6 +55,8 @@ public class DialogueUI : MonoBehaviour
     private float lastNpcVoiceTime = -999f;
     private float lastPlayerVoiceTime = -999f;
     private Speaker currentVoiceSpeaker = Speaker.Unknown;
+    private Sprite[] npcIconsBySentence;
+    private Sprite[] playerIconsBySentence;
 
     private enum Speaker
     {
@@ -120,7 +127,19 @@ public class DialogueUI : MonoBehaviour
 
     public void StartDialogue(string paragraph, NPC_Animation_Controller animationController)
     {
+        StartDialogue(paragraph, animationController, null, null);
+    }
+
+    public void StartDialogue(
+        string paragraph,
+        NPC_Animation_Controller animationController,
+        Sprite[] npcIcons,
+        Sprite[] playerIcons
+    )
+    {
         npcAnimation = animationController;
+        npcIconsBySentence = npcIcons;
+        playerIconsBySentence = playerIcons;
         if (MusicStateManager.Instance != null)
         {
             MusicStateManager.Instance.SetConversation(true);
@@ -207,6 +226,7 @@ public class DialogueUI : MonoBehaviour
             return;
         }
 
+        UpdateIcons(index);
         TriggerVoiceIfNeeded(line.Speaker, line.IsExplicitSpeaker);
         typingRoutine = StartCoroutine(TypeSentence(line));
     }
@@ -383,6 +403,9 @@ public class DialogueUI : MonoBehaviour
             dialogueText.text = string.Empty;
         }
         StopAllVoice();
+
+        SetIconSprite(npcIconImage, null);
+        SetIconSprite(playerIconImage, null);
     }
 
     private void TriggerNpcAnimationIfNeeded(Speaker speaker, bool isExplicitSpeaker)
@@ -524,6 +547,44 @@ public class DialogueUI : MonoBehaviour
     private static bool IsVoicePlaying(AudioSource source)
     {
         return source != null && source.isPlaying;
+    }
+
+    private void UpdateIcons(int sentenceIdx)
+    {
+        DialogueLine line = sentences[sentenceIdx];
+        Sprite npcSprite = (npcIconsBySentence != null && sentenceIdx >= 0 && sentenceIdx < npcIconsBySentence.Length)
+            ? npcIconsBySentence[sentenceIdx]
+            : npcIconSprite;
+        Sprite playerSprite = (playerIconsBySentence != null && sentenceIdx >= 0 && sentenceIdx < playerIconsBySentence.Length)
+            ? playerIconsBySentence[sentenceIdx]
+            : playerIconSprite;
+
+        if (line.Speaker == Speaker.NPC)
+        {
+            SetIconSprite(npcIconImage, npcSprite);
+            SetIconSprite(playerIconImage, null);
+        }
+        else if (line.Speaker == Speaker.Player)
+        {
+            SetIconSprite(npcIconImage, null);
+            SetIconSprite(playerIconImage, playerSprite);
+        }
+        else
+        {
+            SetIconSprite(npcIconImage, null);
+            SetIconSprite(playerIconImage, null);
+        }
+    }
+
+    private static void SetIconSprite(Image image, Sprite sprite)
+    {
+        if (image == null)
+        {
+            return;
+        }
+
+        image.sprite = sprite;
+        image.enabled = sprite != null;
     }
 
     private bool TrySelectSpeakerUI(Speaker speaker)
