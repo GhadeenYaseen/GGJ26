@@ -99,6 +99,7 @@ public class DialogueUI : MonoBehaviour
         {
             nextInstructionText = nextButton.GetComponentInChildren<TMP_Text>();
         }
+        EnsureInstructionTextReferences();
         HideAllUI();
     }
 
@@ -349,11 +350,13 @@ public class DialogueUI : MonoBehaviour
         if (nextInstructionText != null)
         {
             nextInstructionText.gameObject.SetActive(isActive);
+            nextInstructionText.enabled = isActive;
         }
     }
 
     private void UpdateNextInstruction(bool show = true)
     {
+        EnsureInstructionTextReferences();
         if (nextInstructionText == null)
         {
             return;
@@ -361,14 +364,142 @@ public class DialogueUI : MonoBehaviour
 
         if (!show)
         {
-            nextInstructionText.text = string.Empty;
+            if (nextInstructionText != null)
+            {
+                nextInstructionText.text = string.Empty;
+            }
             return;
         }
 
         string keyLabel = nextKey.ToString();
-        nextInstructionText.text = string.IsNullOrWhiteSpace(nextInstructionMessage)
+        string message = string.IsNullOrWhiteSpace(nextInstructionMessage)
             ? keyLabel
             : nextInstructionMessage.Replace("{key}", keyLabel);
+        if (nextInstructionText != null)
+        {
+            nextInstructionText.text = message;
+        }
+    }
+
+    private void EnsureInstructionTextReferences()
+    {
+        if (nextInstructionText != null)
+        {
+            return;
+        }
+
+        TMP_Text tmpCandidate = FindInstructionTMP();
+        if (tmpCandidate != null)
+        {
+            nextInstructionText = tmpCandidate;
+        }
+    }
+
+    private TMP_Text FindInstructionTMP()
+    {
+        TMP_Text fallback = null;
+        foreach (TMP_Text candidate in EnumerateTMPTextCandidates())
+        {
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            if (IsExcludedInstructionCandidate(candidate))
+            {
+                continue;
+            }
+
+            if (IsInstructionText(candidate.text, candidate.name))
+            {
+                return candidate;
+            }
+
+            if (fallback == null)
+            {
+                fallback = candidate;
+            }
+        }
+
+        return fallback;
+    }
+
+    private IEnumerable<TMP_Text> EnumerateTMPTextCandidates()
+    {
+        if (nextButton != null)
+        {
+            foreach (TMP_Text text in nextButton.GetComponentsInChildren<TMP_Text>(true))
+            {
+                yield return text;
+            }
+        }
+
+        foreach (GameObject panelObject in EnumeratePanels())
+        {
+            if (panelObject == null)
+            {
+                continue;
+            }
+
+            foreach (TMP_Text text in panelObject.GetComponentsInChildren<TMP_Text>(true))
+            {
+                yield return text;
+            }
+        }
+
+        foreach (TMP_Text text in GetComponentsInChildren<TMP_Text>(true))
+        {
+            yield return text;
+        }
+    }
+
+    private IEnumerable<GameObject> EnumeratePanels()
+    {
+        if (panel != null)
+        {
+            yield return panel;
+        }
+        if (npcPanel != null)
+        {
+            yield return npcPanel;
+        }
+        if (playerPanel != null)
+        {
+            yield return playerPanel;
+        }
+    }
+
+    private bool IsInstructionText(string textValue, string objectName)
+    {
+        if (!string.IsNullOrEmpty(textValue))
+        {
+            if (textValue.Contains("{key}"))
+            {
+                return true;
+            }
+
+            if (!string.IsNullOrWhiteSpace(nextInstructionMessage) &&
+                textValue.Contains(nextInstructionMessage))
+            {
+                return true;
+            }
+        }
+
+        if (!string.IsNullOrEmpty(objectName))
+        {
+            string lower = objectName.ToLowerInvariant();
+            if (lower.Contains("instruction") || lower.Contains("next"))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsExcludedInstructionCandidate(TMP_Text candidate)
+    {
+        return candidate == dialogueText || candidate == npcText || candidate == playerText;
     }
 
     private void HideAllUI()
